@@ -1,0 +1,113 @@
+name: goreecloud-network-staging
+
+x-default: &default
+  restart: unless-stopped
+  networks:
+    - staging-control
+  logging:
+    driver: json-file
+    options:
+      max-size: 25m
+      max-file: "3"
+  security_opt:
+    - no-new-privileges:true
+
+services:
+  dashboard:
+    <<: *default
+    image: ${GOREECLOUD_NETWORK_DASHBOARD_IMAGE:?Set an exact GoreeCloud dashboard image reference}
+    ports:
+      - ${STAGING_BIND_ADDRESS:-127.0.0.1}:${STAGING_DASHBOARD_HTTP_PORT:-18080}:80
+      - ${STAGING_BIND_ADDRESS:-127.0.0.1}:${STAGING_DASHBOARD_HTTPS_PORT:-18443}:443
+    environment:
+      NETBIRD_MGMT_API_ENDPOINT: ${STAGING_MANAGEMENT_ENDPOINT:?}
+      NETBIRD_MGMT_GRPC_API_ENDPOINT: ${STAGING_MANAGEMENT_ENDPOINT:?}
+      AUTH_AUDIENCE: ${STAGING_AUTH_AUDIENCE:?}
+      AUTH_CLIENT_ID: ${STAGING_AUTH_CLIENT_ID:?}
+      AUTH_CLIENT_SECRET: ${STAGING_AUTH_CLIENT_SECRET:-}
+      AUTH_AUTHORITY: ${STAGING_AUTH_AUTHORITY:?}
+      AUTH_SUPPORTED_SCOPES: ${STAGING_AUTH_SUPPORTED_SCOPES:-openid profile email offline_access}
+      AUTH_REDIRECT_URI: https://${STAGING_DOMAIN:?}:${STAGING_DASHBOARD_HTTPS_PORT:-18443}/auth
+      AUTH_SILENT_REDIRECT_URI: https://${STAGING_DOMAIN:?}:${STAGING_DASHBOARD_HTTPS_PORT:-18443}/silent-auth
+      NETBIRD_TOKEN_SOURCE: accessToken
+      NGINX_SSL_PORT: "443"
+      LETSENCRYPT_DOMAIN: ${STAGING_DOMAIN:?}
+    volumes:
+      - staging-tls:/etc/letsencrypt
+
+  signal:
+    <<: *default
+    image: ${GOREECLOUD_NETWORK_SIGNAL_IMAGE:?Set an exact GoreeCloud signal image reference}
+    ports:
+      - ${STAGING_BIND_ADDRESS:-127.0.0.1}:${STAGING_SIGNAL_PORT:-10000}:80
+    volumes:
+      - staging-signal:/var/lib/netbird
+      - staging-tls:/etc/letsencrypt:ro
+    command:
+      - --cert-file
+      - /etc/letsencrypt/live/${STAGING_DOMAIN:?}/fullchain.pem
+      - --cert-key
+      - /etc/letsencrypt/live/${STAGING_DOMAIN:?}/privkey.pem
+      - --log-file
+      - console
+      - --port
+      - "80"
+
+  relay:
+    <<: *default
+    image: ${GOREECLOUD_NETWORK_RELAY_IMAGE:?Set an exact GoreeCloud relay image reference}
+    environment:
+      NB_LOG_LEVEL: info
+      NB_LISTEN_ADDRESS: :${STAGING_RELAY_PORT:-13301}
+      NB_EXPOSED_ADDRESS: ${STAGING_RELAY_ENDPOINT:?}
+      NB_AUTH_SECRET: ${STAGING_RELAY_AUTH_SECRET:?}
+    ports:
+      - ${STAGING_BIND_ADDRESS:-127.0.0.1}:${STAGING_RELAY_PORT:-13301}:${STAGING_RELAY_PORT:-13301}
+
+  management:
+    <<: *default
+    image: ${GOREECLOUD_NETWORK_MANAGEMENT_IMAGE:?Set an exact GoreeCloud management image reference}
+    ports:
+      - ${STAGING_BIND_ADDRESS:-127.0.0.1}:${STAGING_MANAGEMENT_PORT:-13300}:443
+    volumes:
+      - staging-management:/var/lib/netbird
+      - staging-tls:/etc/letsencrypt:ro
+      - ./runtime/management.json:/etc/netbird/management.json:ro
+    environment:
+      NETBIRD_STORE_ENGINE_POSTGRES_DSN: ${STAGING_POSTGRES_DSN:-}
+      NETBIRD_STORE_ENGINE_MYSQL_DSN: ${STAGING_MYSQL_DSN:-}
+    command:
+      - --port
+      - "443"
+      - --log-file
+      - console
+      - --log-level
+      - info
+      - --disable-anonymous-metrics=${STAGING_DISABLE_ANONYMOUS_METRICS:-true}
+      - --single-account-mode-domain=${STAGING_DOMAIN:?}
+      - --dns-domain=${STAGING_DNS_DOMAIN:?}
+
+  coturn:
+    <<: *default
+    image: ${GOREECLOUD_NETWORK_COTURN_IMAGE:?Set an exact coturn image reference}
+    ports:
+      - ${STAGING_BIND_ADDRESS:-127.0.0.1}:${STAGING_TURN_PORT:-13478}:3478/udp
+      - ${STAGING_BIND_ADDRESS:-127.0.0.1}:${STAGING_TURN_PORT:-13478}:3478/tcp
+    volumes:
+      - ./runtime/turnserver.conf:/etc/turnserver.conf:ro
+    command:
+      - -c
+      - /etc/turnserver.conf
+
+networks:
+  staging-control:
+    name: goreecloud-network-staging-control
+    driver: bridge
+
+volumes:
+  staging-management:
+    name: goreecloud-network-staging-management
+  staging-signal:
+    name: goreecloud-network-staging-signal
+  staging-tls:
+    name: goreecloud-network-staging-tls
