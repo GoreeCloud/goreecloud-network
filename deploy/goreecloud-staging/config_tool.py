@@ -144,6 +144,25 @@ def validate_images(values: dict[str, str]) -> None:
             fail(f"{name} must use an explicit tag or digest")
 
 
+def validate_publication(values: dict[str, str]) -> None:
+    bind = values.get("STAGING_BIND_ADDRESS", "127.0.0.1")
+    allow_non_loopback = values.get("STAGING_ALLOW_NON_LOOPBACK", "false")
+
+    if allow_non_loopback not in ("true", "false"):
+        fail("STAGING_ALLOW_NON_LOOPBACK must be true or false")
+
+    if bind not in ("127.0.0.1", "::1") and allow_non_loopback != "true":
+        fail(
+            "non-loopback STAGING_BIND_ADDRESS requires STAGING_ALLOW_NON_LOOPBACK=true after explicit staging publication approval"
+        )
+
+    if bind not in ("127.0.0.1", "::1"):
+        print(
+            f"warning: non-loopback staging bind {bind!r} explicitly enabled; verify firewall, DNS, TLS, and permitted source networks before startup",
+            file=sys.stderr,
+        )
+
+
 def render() -> None:
     values = parse_dotenv(ENV_PATH)
     require(values, REQUIRED_RENDER_VALUES)
@@ -179,6 +198,7 @@ def validate() -> None:
     require(values, ("STAGING_MANAGEMENT_ENDPOINT", "STAGING_RELAY_ENDPOINT"))
     validate_images(values)
     ensure_nonproduction(values)
+    validate_publication(values)
 
     if values.get("COMPOSE_PROJECT_NAME") != "goreecloud-network-staging":
         fail("COMPOSE_PROJECT_NAME must be goreecloud-network-staging")
@@ -212,13 +232,6 @@ def validate() -> None:
             fail("docker compose configuration validation failed")
     else:
         print("warning: Docker not found; Compose model validation skipped", file=sys.stderr)
-
-    bind = values.get("STAGING_BIND_ADDRESS", "127.0.0.1")
-    if bind not in ("127.0.0.1", "::1"):
-        print(
-            f"warning: non-loopback staging bind {bind!r}; verify firewall and publication approval before startup",
-            file=sys.stderr,
-        )
 
     for path in (management_path, turn_path):
         digest = hashlib.sha256(path.read_bytes()).hexdigest()
