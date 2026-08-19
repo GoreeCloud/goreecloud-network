@@ -1,0 +1,16 @@
+# GoreeCloud Network isolated staging TURN configuration
+# Rendered locally from staging-only values. Do not commit populated credentials.
+
+listening-port=3478
+fingerprint
+lt-cred-mech
+realm=${STAGING_DOMAIN}
+user=${STAGING_TURN_USER}:${STAGING_TURN_PASSWORD}
+no-cli
+no-multicast-peers
+no-loopback-peers
+stale-nonce
+
+# Keep logs on stdout for retained acceptance evidence.
+log-file=stdout
+simple-log
