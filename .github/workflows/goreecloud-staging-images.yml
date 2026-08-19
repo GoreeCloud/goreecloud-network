@@ -25,6 +25,7 @@ env:
   MANAGEMENT_IMAGE: ghcr.io/goreecloud/goreecloud-network-management
   SIGNAL_IMAGE: ghcr.io/goreecloud/goreecloud-network-signal
   RELAY_IMAGE: ghcr.io/goreecloud/goreecloud-network-relay
+  SOURCE_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
 
 jobs:
   build-staging-images:
@@ -32,6 +33,20 @@ jobs:
     steps:
       - name: Check out exact source revision
         uses: actions/checkout@v5
+        with:
+          ref: ${{ env.SOURCE_SHA }}
+          fetch-depth: 0
+
+      - name: Verify exact source revision
+        shell: bash
+        run: |
+          set -euo pipefail
+          actual_sha="$(git rev-parse HEAD)"
+          if [[ "$actual_sha" != "$SOURCE_SHA" ]]; then
+            echo "Expected source revision $SOURCE_SHA but checked out $actual_sha" >&2
+            exit 1
+          fi
+          echo "Verified exact control-plane source revision: $SOURCE_SHA"
 
       - name: Set up Go
         uses: actions/setup-go@v6
@@ -45,8 +60,8 @@ jobs:
           set -euo pipefail
           mkdir -p linux/amd64
 
-          VERSION="staging-${GITHUB_SHA}"
-          LDFLAGS="-s -w -X github.com/netbirdio/netbird/version.version=${VERSION} -X main.commit=${GITHUB_SHA} -X main.builtBy=goreecloud-staging"
+          VERSION="staging-${SOURCE_SHA}"
+          LDFLAGS="-s -w -X github.com/netbirdio/netbird/version.version=${VERSION} -X main.commit=${SOURCE_SHA} -X main.builtBy=goreecloud-staging"
 
           CGO_ENABLED=1 GOOS=linux GOARCH=amd64 \
             go build -trimpath -ldflags "$LDFLAGS" \
@@ -94,9 +109,9 @@ jobs:
           file: management/Dockerfile
           platforms: linux/amd64
           push: ${{ steps.publication.outputs.publish == 'true' }}
-          tags: ${{ env.MANAGEMENT_IMAGE }}:staging-${{ github.sha }}
+          tags: ${{ env.MANAGEMENT_IMAGE }}:staging-${{ env.SOURCE_SHA }}
           labels: |
-            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.revision=${{ env.SOURCE_SHA }}
             org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
             goreecloud.environment=staging
 
@@ -107,9 +122,9 @@ jobs:
           file: signal/Dockerfile
           platforms: linux/amd64
           push: ${{ steps.publication.outputs.publish == 'true' }}
-          tags: ${{ env.SIGNAL_IMAGE }}:staging-${{ github.sha }}
+          tags: ${{ env.SIGNAL_IMAGE }}:staging-${{ env.SOURCE_SHA }}
           labels: |
-            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.revision=${{ env.SOURCE_SHA }}
             org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
             goreecloud.environment=staging
 
@@ -120,9 +135,9 @@ jobs:
           file: relay/Dockerfile
           platforms: linux/amd64
           push: ${{ steps.publication.outputs.publish == 'true' }}
-          tags: ${{ env.RELAY_IMAGE }}:staging-${{ github.sha }}
+          tags: ${{ env.RELAY_IMAGE }}:staging-${{ env.SOURCE_SHA }}
           labels: |
-            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.revision=${{ env.SOURCE_SHA }}
             org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
             goreecloud.environment=staging
 
@@ -131,16 +146,16 @@ jobs:
         run: |
           set -euo pipefail
           cat > goreecloud-staging-images.env <<EOF
-          GOREECLOUD_NETWORK_MANAGEMENT_IMAGE=${MANAGEMENT_IMAGE}:staging-${GITHUB_SHA}
-          GOREECLOUD_NETWORK_SIGNAL_IMAGE=${SIGNAL_IMAGE}:staging-${GITHUB_SHA}
-          GOREECLOUD_NETWORK_RELAY_IMAGE=${RELAY_IMAGE}:staging-${GITHUB_SHA}
-          GOREECLOUD_NETWORK_SOURCE_REVISION=${GITHUB_SHA}
+          GOREECLOUD_NETWORK_MANAGEMENT_IMAGE=${MANAGEMENT_IMAGE}:staging-${SOURCE_SHA}
+          GOREECLOUD_NETWORK_SIGNAL_IMAGE=${SIGNAL_IMAGE}:staging-${SOURCE_SHA}
+          GOREECLOUD_NETWORK_RELAY_IMAGE=${RELAY_IMAGE}:staging-${SOURCE_SHA}
+          GOREECLOUD_NETWORK_SOURCE_REVISION=${SOURCE_SHA}
           EOF
 
           {
             echo '### GoreeCloud staging image contract'
             echo
-            echo "Source revision: \`${GITHUB_SHA}\`"
+            echo "Source revision: \`${SOURCE_SHA}\`"
             echo
             echo '```dotenv'
             cat goreecloud-staging-images.env
@@ -156,7 +171,7 @@ jobs:
       - name: Upload staging image evidence
         uses: actions/upload-artifact@v4
         with:
-          name: goreecloud-staging-image-evidence-${{ github.sha }}
+          name: goreecloud-staging-image-evidence-${{ env.SOURCE_SHA }}
           path: |
             goreecloud-staging-images.env
             staging-binary-sha256.txt
