@@ -20,7 +20,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Check out source
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Validate Python and shell syntax
         run: |
@@ -34,6 +34,7 @@ jobs:
           cat > .env <<'EOF'
           COMPOSE_PROJECT_NAME=goreecloud-network-staging
           STAGING_BIND_ADDRESS=127.0.0.1
+          STAGING_ALLOW_NON_LOOPBACK=false
           STAGING_DOMAIN=network-staging.invalid
           STAGING_DNS_DOMAIN=network-staging.invalid
           GOREECLOUD_NETWORK_MANAGEMENT_IMAGE=example.invalid/goreecloud/network-management:test
@@ -86,13 +87,24 @@ jobs:
           python3 config_tool.py render
           python3 config_tool.py validate
 
-      - name: Reject production markers from deployable staging templates
+      - name: Reject production markers from deployable staging values
+        shell: bash
         run: |
-          if grep -n -E 'netbird\.goreecloud\.com|100\.71\.27\.119' \
-            deploy/goreecloud-staging/compose.yaml \
-            deploy/goreecloud-staging/.env.example \
-            deploy/goreecloud-staging/management.json.template \
-            deploy/goreecloud-staging/turnserver.conf.template; then
-            echo 'Production NetBird marker found in deployable staging configuration.' >&2
+          set -euo pipefail
+          files=(
+            deploy/goreecloud-staging/compose.yaml
+            deploy/goreecloud-staging/.env.example
+            deploy/goreecloud-staging/management.json.template
+            deploy/goreecloud-staging/turnserver.conf.template
+          )
+
+          # Safety documentation may name a forbidden production marker in a comment
+          # to explain what must not be reused. Only executable/configuration values
+          # are prohibited by this source-level scan; config_tool.py separately
+          # rejects production markers from the populated staging environment and
+          # rendered runtime configuration.
+          if grep -h -v -E '^[[:space:]]*#' "${files[@]}" \
+            | grep -n -E 'netbird\.goreecloud\.com|100\.71\.27\.119'; then
+            echo 'Production NetBird marker found in deployable staging value.' >&2
             exit 1
           fi
