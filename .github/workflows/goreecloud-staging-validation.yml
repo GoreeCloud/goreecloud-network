@@ -25,6 +25,7 @@ jobs:
       - name: Validate Python and shell syntax
         run: |
           python3 -m py_compile deploy/goreecloud-staging/config_tool.py
+          python3 -m py_compile deploy/goreecloud-staging/acceptance_evidence.py
           bash -n deploy/goreecloud-staging/render-config.sh
           bash -n deploy/goreecloud-staging/validate-staging.sh
 
@@ -37,11 +38,15 @@ jobs:
           STAGING_ALLOW_NON_LOOPBACK=false
           STAGING_DOMAIN=network-staging.invalid
           STAGING_DNS_DOMAIN=network-staging.invalid
-          GOREECLOUD_NETWORK_MANAGEMENT_IMAGE=example.invalid/goreecloud/network-management:test
-          GOREECLOUD_NETWORK_SIGNAL_IMAGE=example.invalid/goreecloud/network-signal:test
-          GOREECLOUD_NETWORK_RELAY_IMAGE=example.invalid/goreecloud/network-relay:test
-          GOREECLOUD_NETWORK_DASHBOARD_IMAGE=example.invalid/goreecloud/network-dashboard:test
-          GOREECLOUD_NETWORK_COTURN_IMAGE=example.invalid/goreecloud/coturn:test
+          GOREECLOUD_NETWORK_SOURCE_SHA=${{ github.sha }}
+          GOREECLOUD_NETWORK_DASHBOARD_SOURCE_SHA=bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+          GOREECLOUD_NETWORK_ANDROID_SOURCE_SHA=cccccccccccccccccccccccccccccccccccccccc
+          GOREECLOUD_NETWORK_ANDROID_ARTIFACT_SHA256=dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd
+          GOREECLOUD_NETWORK_MANAGEMENT_IMAGE=example.invalid/goreecloud/network-management@sha256:1111111111111111111111111111111111111111111111111111111111111111
+          GOREECLOUD_NETWORK_SIGNAL_IMAGE=example.invalid/goreecloud/network-signal@sha256:2222222222222222222222222222222222222222222222222222222222222222
+          GOREECLOUD_NETWORK_RELAY_IMAGE=example.invalid/goreecloud/network-relay@sha256:3333333333333333333333333333333333333333333333333333333333333333
+          GOREECLOUD_NETWORK_DASHBOARD_IMAGE=example.invalid/goreecloud/network-dashboard@sha256:4444444444444444444444444444444444444444444444444444444444444444
+          GOREECLOUD_NETWORK_COTURN_IMAGE=example.invalid/goreecloud/coturn@sha256:5555555555555555555555555555555555555555555555555555555555555555
           STAGING_DASHBOARD_HTTP_PORT=18080
           STAGING_DASHBOARD_HTTPS_PORT=18443
           STAGING_MANAGEMENT_PORT=13300
@@ -86,6 +91,30 @@ jobs:
         run: |
           python3 config_tool.py render
           python3 config_tool.py validate
+
+      - name: Collect source-bound sanitized acceptance evidence
+        working-directory: deploy/goreecloud-staging
+        run: |
+          python3 acceptance_evidence.py collect --require-android
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          evidence_path = Path('runtime/acceptance-evidence.json')
+          evidence = json.loads(evidence_path.read_text(encoding='utf-8'))
+          assert evidence['schema'] == 'goreecloud-network-acceptance-evidence/v1'
+          assert evidence['source']['control_plane_sha'] == '${{ github.sha }}'.lower()
+          assert evidence['android']['required_for_this_manifest'] is True
+          assert evidence['assertions']['credentials_included'] is False
+          serialized = evidence_path.read_text(encoding='utf-8')
+          for forbidden in (
+              'staging-not-a-real-secret',
+              'staging-datastore-encryption-key-not-real',
+              'staging-relay-secret-not-real',
+              'staging-turn-password-not-real',
+          ):
+              assert forbidden not in serialized
+          PY
 
       - name: Reject production markers from deployable staging values
         shell: bash
