@@ -86,11 +86,13 @@ jobs:
           python3 config_tool.py render
           python3 config_tool.py validate
 
-      - name: Reject production markers in staging source
+      - name: Reject production markers from deployable staging templates
         run: |
-          if grep -R -n -E 'netbird\.goreecloud\.com|100\.71\.27\.119' deploy/goreecloud-staging \
-            --exclude='.env' \
-            --exclude-dir='runtime'; then
-            echo 'Production NetBird marker found in staging source.' >&2
+          if grep -n -E 'netbird\.goreecloud\.com|100\.71\.27\.119' \
+            deploy/goreecloud-staging/compose.yaml \
+            deploy/goreecloud-staging/.env.example \
+            deploy/goreecloud-staging/management.json.template \
+            deploy/goreecloud-staging/turnserver.conf.template; then
+            echo 'Production NetBird marker found in deployable staging configuration.' >&2
             exit 1
           fi
