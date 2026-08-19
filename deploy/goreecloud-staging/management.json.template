@@ -43,7 +43,7 @@
     "Engine": "${STAGING_STORE_ENGINE}"
   },
   "HttpConfig": {
-    "Address": "0.0.0.0:${STAGING_MANAGEMENT_PORT}",
+    "Address": "0.0.0.0:443",
     "AuthIssuer": "${STAGING_AUTH_AUTHORITY}",
     "AuthAudience": "${STAGING_AUTH_AUDIENCE}",
     "AuthKeysLocation": "${STAGING_AUTH_JWT_CERTS}",
@@ -69,7 +69,7 @@
     "ZitadelClientCredentials": null
   },
   "DeviceAuthorizationFlow": {
-    "Provider": "hosted",
+    "Provider": "${STAGING_AUTH_DEVICE_AUTH_PROVIDER}",
     "ProviderConfig": {
       "Audience": "${STAGING_AUTH_AUDIENCE}",
       "AuthorizationEndpoint": "",
