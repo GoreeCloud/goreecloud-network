@@ -1,0 +1,88 @@
+name: GoreeCloud management tests
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+      - "agent/**"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: goreecloud-management-tests-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  SOURCE_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+  GOTOOLCHAIN: local
+
+jobs:
+  management-unit:
+    name: Management / Unit (${{ matrix.store }})
+    runs-on: ubuntu-22.04
+    strategy:
+      fail-fast: false
+      matrix:
+        store:
+          - sqlite
+          - postgres
+          - mysql
+
+    steps:
+      - name: Check out exact source revision
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ env.SOURCE_SHA }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Verify exact source revision
+        shell: bash
+        run: |
+          set -euo pipefail
+          actual_sha="$(git rev-parse HEAD)"
+          if [[ "$actual_sha" != "$SOURCE_SHA" ]]; then
+            echo "Expected source revision $SOURCE_SHA but checked out $actual_sha" >&2
+            exit 1
+          fi
+          echo "Verified exact control-plane source revision: $SOURCE_SHA"
+
+      - name: Install Go
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Verify module graph is clean
+        shell: bash
+        run: |
+          set -euo pipefail
+          go mod tidy
+          git --no-pager diff --exit-code
+
+      - name: Record public container-registry mode
+        run: echo "Management tests use unauthenticated public registry pulls; no Docker Hub credentials are required."
+
+      - name: Run management unit tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          CGO_ENABLED=1 \
+          GOARCH=amd64 \
+          NETBIRD_STORE_ENGINE=${{ matrix.store }} \
+          CI=true \
+          go test -tags=devcert -coverprofile="coverage-${{ matrix.store }}.txt" \
+            -exec "sudo --preserve-env=CI,NETBIRD_STORE_ENGINE" \
+            -timeout 20m ./management/... ./shared/management/...
+
+      - name: Upload management test evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: goreecloud-management-${{ matrix.store }}-${{ env.SOURCE_SHA }}
+          path: coverage-${{ matrix.store }}.txt
+          if-no-files-found: warn
+          retention-days: 14
