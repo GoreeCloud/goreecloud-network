@@ -2,6 +2,10 @@
 
 GoreeCloud Network is the GoreeCloud-maintained private-networking fork based on NetBird.
 
+Its umbrella capability identity is **GoreeCloud Conduit**. Conduit represents the controlled private paths that connect approved people, devices, services, servers, virtual machines, routed networks, and private resources across GoreeCloud. The application/product name remains GoreeCloud Network; Conduit names the capability system beneath it.
+
+See `docs/goreecloud/conduit-capability-identity.md` for the authoritative repository-local capability identity, scope, presentation guidance, and responsibility boundaries.
+
 ## Current development state
 
 This repository is in the fork-foundation phase. The inherited NetBird networking behavior remains the compatibility baseline while GoreeCloud establishes its own product identity, governance, security presentation, integrations, release process, and long-term fork-to-native path.
@@ -32,14 +36,17 @@ The inherited repository uses a mixed-license structure. The repository-level BS
 
 The planned GoreeCloud-controlled experience uses:
 
+- **GoreeCloud Conduit** as the Network umbrella capability identity for encrypted connectivity, enrollment, access paths, policies, private resources, routing, client connectivity, and network diagnostics.
 - **Glaze UI** for GoreeCloud graphical interfaces.
 - **Wardveil Security by GoreeCloud** for security-state presentation, risk indicators, enrollment review, policy-risk visibility, and related security workflows.
 - **GoreeCloud Privacy Shield** as the shared platform privacy identity and contract authority for the explicitly declared `network-privacy` capability. GoreeCloud Network remains the networking runtime authority, and `privacy-shield/adapter.json` remains `production_approved=false` until Network-specific runtime acceptance is complete.
 - **GoreeCloud Identity** where centralized authentication or identity-provider integration is appropriate.
-- **AdGuard Home and Unbound** for their existing DNS responsibilities rather than absorbing DNS-service roles into this project.
+- **GoreeCloud Beacon** for DNS filtering, private rewrites, recursive resolution, caching, DNSSEC, authoritative DNS, encrypted DNS, and DNS policy rather than absorbing DNS-service roles into this project.
 - **Caddy** as the separate approved HTTPS gateway for web-service publication.
 
 Privacy Shield does not turn GoreeCloud Network into a Browser blocker, DNS filtering service, firewall, identity provider, or application-authorization layer. A future Privacy Shield status producer must remain minimized and must not export raw private network activity merely for central presentation.
+
+Conduit does not change these responsibility boundaries. It names the GoreeCloud Network capability layer; it does not make Network authoritative for DNS, reverse proxying, identity-provider authentication, destination-application authorization, monitoring, or platform-wide security analysis.
 
 ## Initial repository family
 
@@ -53,3 +60,5 @@ Privacy Shield does not turn GoreeCloud Network into a Browser blocker, DNS filt
 `agent/stable-foundation` is the initial controlled GoreeCloud development branch. The goal of this branch is to establish provenance, governance, build/CI understanding, licensing boundaries, safe product customization points, and release-readiness gates before material networking behavior is changed.
 
 The focused `agent/privacy-shield-network-adapter` branch is stacked on this stable foundation and adds Privacy Shield adapter governance only. It does not intentionally modify the inherited networking core or authorize production migration.
+
+The focused `agent/conduit-capability-identity` branch is stacked on the Privacy Shield adapter branch and adds the Conduit capability identity and documentation only. It does not intentionally modify the inherited networking core or authorize production migration.
