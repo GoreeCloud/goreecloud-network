@@ -20,24 +20,30 @@ permissions:
 
 jobs:
   validate:
-    name: Validate migration registry
+    name: Validate migration registry and native control
     runs-on: ubuntu-latest
+    env:
+      SOURCE_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
     steps:
       - name: Check out exact source revision
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
+          ref: ${{ env.SOURCE_SHA }}
           persist-credentials: false
           fetch-depth: 1
 
-      - name: Record exact source revision
+      - name: Verify exact source revision
         shell: bash
         run: |
           set -euo pipefail
-          echo "GITHUB_SHA=${GITHUB_SHA}"
-          test "$(git rev-parse HEAD)" = "${GITHUB_SHA}"
+          echo "SOURCE_SHA=${SOURCE_SHA}"
+          test "$(git rev-parse HEAD)" = "${SOURCE_SHA}"
 
       - name: Validate Conduit native-feature registry
         run: python3 scripts/validate-conduit-native-features.py
 
       - name: Validate Conduit migration contracts
         run: python3 scripts/validate-conduit-migrations.py
+
+      - name: Test first-party Conduit Control contract
+        run: go test ./native/conduit/control
