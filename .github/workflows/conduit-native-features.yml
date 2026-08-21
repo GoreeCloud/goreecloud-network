@@ -1,0 +1,55 @@
+name: Conduit Native Feature Contract
+
+on:
+  pull_request:
+    paths:
+      - "native/conduit/**"
+      - "docs/goreecloud/native-feature-replacement-plan.md"
+      - "scripts/validate-conduit-native-features.py"
+      - ".github/workflows/conduit-native-features.yml"
+      - "GOREECLOUD.md"
+  push:
+    branches:
+      - main
+      - "agent/**"
+    paths:
+      - "native/conduit/**"
+      - "docs/goreecloud/native-feature-replacement-plan.md"
+      - "scripts/validate-conduit-native-features.py"
+      - ".github/workflows/conduit-native-features.yml"
+      - "GOREECLOUD.md"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Resolve source revision
+        id: source
+        shell: bash
+        run: |
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            echo "sha=${{ github.event.pull_request.head.sha }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "sha=${{ github.sha }}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Check out exact source
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ steps.source.outputs.sha }}
+          fetch-depth: 1
+
+      - name: Verify exact source
+        shell: bash
+        run: |
+          test "$(git rev-parse HEAD)" = "${{ steps.source.outputs.sha }}"
+
+      - name: Validate Python syntax
+        run: python3 -m py_compile scripts/validate-conduit-native-features.py
+
+      - name: Validate Conduit native feature contract
+        run: python3 scripts/validate-conduit-native-features.py
