@@ -61,7 +61,11 @@ func TestConduitStatusStartsAfterInheritedRuntimeAndIsReadOnly(t *testing.T) {
 	if err := wrapped.Start(ctx); err != nil {
 		t.Fatalf("Start() error = %v", err)
 	}
-	defer wrapped.Stop()
+	defer func() {
+		if err := wrapped.Stop(); err != nil {
+			t.Errorf("Stop() error = %v", err)
+		}
+	}()
 	if !inner.started {
 		t.Fatal("inherited management runtime must start before Conduit status is exposed")
 	}
