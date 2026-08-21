@@ -1,0 +1,43 @@
+name: Conduit Native Migration Contract
+
+on:
+  pull_request:
+    paths:
+      - "native/conduit/**"
+      - "scripts/validate-conduit-migrations.py"
+      - ".github/workflows/conduit-native-migrations.yml"
+  push:
+    branches:
+      - main
+      - agent/**
+    paths:
+      - "native/conduit/**"
+      - "scripts/validate-conduit-migrations.py"
+      - ".github/workflows/conduit-native-migrations.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: Validate migration registry
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out exact source revision
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+
+      - name: Record exact source revision
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "GITHUB_SHA=${GITHUB_SHA}"
+          test "$(git rev-parse HEAD)" = "${GITHUB_SHA}"
+
+      - name: Validate Conduit native-feature registry
+        run: python3 scripts/validate-conduit-native-features.py
+
+      - name: Validate Conduit migration contracts
+        run: python3 scripts/validate-conduit-migrations.py
