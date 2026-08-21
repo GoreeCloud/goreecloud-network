@@ -237,10 +237,10 @@ jobs:
           docker compose logs --tail=20
 
       - name: test running containers
-        run: |
-          count=$(docker compose ps --format json | jq '. | select(.Name | contains("artifacts")) | .State' | grep -c running)
-          test $count -eq 5 || docker compose logs
         working-directory: infrastructure_files/artifacts
+        run: |
+          count=$(docker compose ps --format json | jq -s '[.[] | select(.Name | contains("artifacts")) | select(.State == "running")] | length')
+          test "$count" -eq 5 || docker compose logs
 
       - name: test geolocation databases
         working-directory: infrastructure_files/artifacts
