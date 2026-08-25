@@ -58,10 +58,10 @@ func ValidateCapabilityInventory(inventory CapabilityInventory) error {
 // individual capability identifiers to higher-level status consumers.
 type CapabilitySummary struct {
 	Total        int `json:"total"`
-	Inherited   int `json:"inherited"`
+	Inherited    int `json:"inherited"`
 	Transitional int `json:"transitional"`
-	Native      int `json:"native"`
-	Bridged     int `json:"bridged"`
+	Native       int `json:"native"`
+	Bridged      int `json:"bridged"`
 }
 
 func SummarizeCapabilities(inventory CapabilityInventory) (CapabilitySummary, error) {
