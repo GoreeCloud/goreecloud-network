@@ -74,9 +74,6 @@ func ApplyStoredCapabilityTransitionWithReceipt(inventoryStore *CapabilityInvent
 }
 
 func replayStoredCapabilityTransition(receiptStore *CapabilityTransitionReceiptStore, current CapabilityInventorySnapshot, expectedFingerprint, capabilityID string, evidence IsolatedAcceptanceEvidence) (StoredCapabilityTransitionResult, error) {
-	if err := ValidateIsolatedAcceptanceEvidence(evidence); err != nil {
-		return StoredCapabilityTransitionResult{}, err
-	}
 	var target *CapabilityState
 	for i := range current.Inventory.Capabilities {
 		if current.Inventory.Capabilities[i].ID == capabilityID {
@@ -86,6 +83,13 @@ func replayStoredCapabilityTransition(receiptStore *CapabilityTransitionReceiptS
 	}
 	if target == nil || target.MigrationStage != MigrationStageIsolatedValidation || target.Authority != AuthorityInherited || !target.CompatibilityBridgeActive || target.ProductionCutoverAuthorized {
 		return StoredCapabilityTransitionResult{}, errors.New("conduit control: capability inventory snapshot fingerprint mismatch")
+	}
+	decision, err := EvaluateIsolatedAcceptance(*target, evidence)
+	if err != nil {
+		return StoredCapabilityTransitionResult{}, err
+	}
+	if !decision.EligibleForIsolatedValidation {
+		return StoredCapabilityTransitionResult{}, errors.New("conduit control: idempotent transition replay requires complete isolated acceptance evidence")
 	}
 	probe := CapabilityTransitionReceipt{
 		Schema:                      CapabilityTransitionReceiptSchemaV1,
