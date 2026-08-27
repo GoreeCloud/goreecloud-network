@@ -130,6 +130,9 @@ func (s *CapabilityTransitionReceiptStore) Save(receipt CapabilityTransitionRece
 	if s == nil || strings.TrimSpace(s.directory) == "" {
 		return "", errors.New("conduit control: capability transition receipt store is not initialized")
 	}
+	if supportErr := requireProtectedFileStoreSupport(); supportErr != nil {
+		return "", supportErr
+	}
 	if err := validateCapabilityTransitionReceipt(receipt); err != nil {
 		return "", err
 	}
@@ -173,6 +176,9 @@ func (s *CapabilityTransitionReceiptStore) Save(receipt CapabilityTransitionRece
 func (s *CapabilityTransitionReceiptStore) Load(path string) (CapabilityTransitionReceipt, error) {
 	if s == nil || strings.TrimSpace(s.directory) == "" {
 		return CapabilityTransitionReceipt{}, errors.New("conduit control: capability transition receipt store is not initialized")
+	}
+	if supportErr := requireProtectedFileStoreSupport(); supportErr != nil {
+		return CapabilityTransitionReceipt{}, supportErr
 	}
 	cleanDirectory := filepath.Clean(s.directory)
 	cleanPath := filepath.Clean(path)
