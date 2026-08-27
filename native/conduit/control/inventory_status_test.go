@@ -11,6 +11,7 @@ import (
 )
 
 func TestInventoryStatusHandlerExposesAggregatePersistedStateOnly(t *testing.T) {
+	requireProtectedFileStoreTestSupport(t)
 	store, err := NewCapabilityInventoryStore(filepath.Join(t.TempDir(), "inventory.json"))
 	if err != nil {
 		t.Fatal(err)
