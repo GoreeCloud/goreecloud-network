@@ -9,7 +9,18 @@ from pathlib import Path
 
 from validate_conduit_evidence import validate
 
-CHECK_NAMES = ("source", "unit", "integration", "security_privacy", "isolated_runtime")
+CHECK_NAMES = (
+    "source",
+    "immutable_runtime_artifact",
+    "unit",
+    "integration",
+    "state_migration",
+    "backup_restore",
+    "rollback",
+    "client_networking",
+    "security_privacy",
+    "isolated_runtime",
+)
 
 
 def build(feature_id: str, source_sha: str, artifact_digest: str, checks: dict[str, bool]) -> dict[str, object]:
