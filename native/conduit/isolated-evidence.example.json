@@ -1,0 +1,17 @@
+{
+  "schema": "goreecloud-conduit-isolated-evidence/v1",
+  "feature_id": "control",
+  "source_sha": "1111111111111111111111111111111111111111",
+  "artifact_digest": "sha256:2222222222222222222222222222222222222222222222222222222222222222",
+  "environment": "isolated-staging",
+  "authority": "inherited",
+  "compatibility_bridge_active": true,
+  "production_cutover_authorized": false,
+  "checks": {
+    "source": true,
+    "unit": true,
+    "integration": true,
+    "security_privacy": true,
+    "isolated_runtime": true
+  }
+}
