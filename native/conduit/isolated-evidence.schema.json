@@ -27,11 +27,27 @@
     "checks": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["source", "unit", "integration", "security_privacy", "isolated_runtime"],
+      "required": [
+        "source",
+        "immutable_runtime_artifact",
+        "unit",
+        "integration",
+        "state_migration",
+        "backup_restore",
+        "rollback",
+        "client_networking",
+        "security_privacy",
+        "isolated_runtime"
+      ],
       "properties": {
         "source": {"const": true},
+        "immutable_runtime_artifact": {"const": true},
         "unit": {"const": true},
         "integration": {"const": true},
+        "state_migration": {"const": true},
+        "backup_restore": {"const": true},
+        "rollback": {"const": true},
+        "client_networking": {"const": true},
         "security_privacy": {"const": true},
         "isolated_runtime": {"const": true}
       }
