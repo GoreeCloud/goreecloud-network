@@ -59,6 +59,9 @@ jobs:
       - name: Validate Conduit isolated-evidence validator syntax
         run: python3 -m py_compile deploy/goreecloud-staging/validate_conduit_evidence.py
 
+      - name: Validate Conduit isolated-evidence example end to end
+        run: python3 deploy/goreecloud-staging/validate_conduit_evidence.py native/conduit/isolated-evidence.example.json
+
       - name: Test first-party Conduit Control contract
         run: go test ./native/conduit/control
 
