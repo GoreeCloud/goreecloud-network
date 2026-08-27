@@ -55,6 +55,26 @@ Stateful features must also declare backup/restore acceptance.
 
 Additional gates are required when relevant, including network-path validation, DNS-resolution validation, signed-artifact provenance, real-device testing, and accessibility validation.
 
+## Isolated-validation decision contract
+
+`native/conduit/control/acceptance.go` provides the privacy-safe `goreecloud-conduit-isolated-acceptance/v1` source contract for deciding whether one capability has enough evidence to enter isolated validation.
+
+The bounded evidence model records only pass/fail state for:
+
+- exact source revision identity;
+- immutable runtime artifact identity;
+- state-migration validation;
+- backup and restore proof;
+- rollback rehearsal;
+- client and networking validation; and
+- security and privacy validation.
+
+The evaluator fails closed when required evidence is missing, when evidence belongs to a different capability, when source state attempts to authorize production cutover, or when the capability already claims native authority before this pre-native gate.
+
+A successful decision sets only `eligible_for_isolated_validation`. `production_cutover_authorized` is always false. Isolated-validation eligibility does not advance the registry automatically, transfer authoritative state, retire a compatibility bridge, or approve production migration.
+
+The contract intentionally contains no peer, route, policy, credential, device, packet, DNS-query, or user data.
+
 ## Compatibility bridges
 
 A compatibility bridge is temporary by definition. It exists to preserve currently accepted behavior while a Conduit-native implementation is introduced and validated.
@@ -63,7 +83,7 @@ A bridge must not become an excuse to deepen unnecessary coupling to inherited c
 
 ## Production boundary
 
-The migration registry is intentionally fail-closed:
+The migration registry and isolated-validation decision remain intentionally fail-closed:
 
 - `production_cutover_authorized` must remain `false`;
 - the source contract cannot mark production migration complete;
