@@ -9,8 +9,13 @@
   "production_cutover_authorized": false,
   "checks": {
     "source": true,
+    "immutable_runtime_artifact": true,
     "unit": true,
     "integration": true,
+    "state_migration": true,
+    "backup_restore": true,
+    "rollback": true,
+    "client_networking": true,
     "security_privacy": true,
     "isolated_runtime": true
   }
