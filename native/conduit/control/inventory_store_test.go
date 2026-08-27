@@ -8,6 +8,7 @@ import (
 )
 
 func TestCapabilityInventoryStoreRoundTripsValidatedSnapshot(t *testing.T) {
+	requireProtectedFileStoreTestSupport(t)
 	path := filepath.Join(t.TempDir(), "state", "inventory.json")
 	store, err := NewCapabilityInventoryStore(path)
 	if err != nil {
@@ -43,6 +44,7 @@ func TestCapabilityInventoryStoreRoundTripsValidatedSnapshot(t *testing.T) {
 }
 
 func TestAdvanceStoredCapabilityToIsolatedValidationRequiresCurrentFingerprint(t *testing.T) {
+	requireProtectedFileStoreTestSupport(t)
 	path := filepath.Join(t.TempDir(), "inventory.json")
 	store, err := NewCapabilityInventoryStore(path)
 	if err != nil {
