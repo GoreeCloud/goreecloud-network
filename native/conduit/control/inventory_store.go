@@ -59,6 +59,9 @@ func (s *CapabilityInventoryStore) Load() (CapabilityInventorySnapshot, error) {
 	if s == nil || strings.TrimSpace(s.path) == "" {
 		return CapabilityInventorySnapshot{}, errors.New("conduit control: capability inventory store is not initialized")
 	}
+	if supportErr := requireProtectedFileStoreSupport(); supportErr != nil {
+		return CapabilityInventorySnapshot{}, supportErr
+	}
 	data, err := os.ReadFile(s.path)
 	if err != nil {
 		return CapabilityInventorySnapshot{}, err
@@ -76,6 +79,9 @@ func (s *CapabilityInventoryStore) Load() (CapabilityInventorySnapshot, error) {
 func (s *CapabilityInventoryStore) Save(snapshot CapabilityInventorySnapshot) error {
 	if s == nil || strings.TrimSpace(s.path) == "" {
 		return errors.New("conduit control: capability inventory store is not initialized")
+	}
+	if supportErr := requireProtectedFileStoreSupport(); supportErr != nil {
+		return supportErr
 	}
 	if err := validateCapabilityInventorySnapshot(snapshot); err != nil {
 		return err
