@@ -8,6 +8,7 @@ on:
       - "management/cmd/conduit_status_test.go"
       - "deploy/goreecloud-staging/acceptance_evidence.py"
       - "deploy/goreecloud-staging/test_acceptance_evidence.py"
+      - "deploy/goreecloud-staging/validate_conduit_evidence.py"
       - "scripts/validate-conduit-migrations.py"
       - ".github/workflows/conduit-native-migrations.yml"
   push:
@@ -20,6 +21,7 @@ on:
       - "management/cmd/conduit_status_test.go"
       - "deploy/goreecloud-staging/acceptance_evidence.py"
       - "deploy/goreecloud-staging/test_acceptance_evidence.py"
+      - "deploy/goreecloud-staging/validate_conduit_evidence.py"
       - "scripts/validate-conduit-migrations.py"
       - ".github/workflows/conduit-native-migrations.yml"
   workflow_dispatch:
@@ -53,6 +55,9 @@ jobs:
 
       - name: Validate Conduit migration contracts
         run: python3 scripts/validate-conduit-migrations.py
+
+      - name: Validate Conduit isolated-evidence validator syntax
+        run: python3 -m py_compile deploy/goreecloud-staging/validate_conduit_evidence.py
 
       - name: Test first-party Conduit Control contract
         run: go test ./native/conduit/control
