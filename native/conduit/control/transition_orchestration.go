@@ -92,16 +92,9 @@ func replayStoredCapabilityTransition(receiptStore *CapabilityTransitionReceiptS
 		return StoredCapabilityTransitionResult{}, errors.New("conduit control: idempotent transition replay requires complete isolated acceptance evidence")
 	}
 	probe := CapabilityTransitionReceipt{
-		Schema:                      CapabilityTransitionReceiptSchemaV1,
-		CapabilityID:                capabilityID,
-		FromSnapshotFingerprint:     expectedFingerprint,
-		ToSnapshotFingerprint:       current.Fingerprint,
-		FromStage:                   "implementation",
-		ToStage:                     MigrationStageIsolatedValidation,
-		Authority:                   AuthorityInherited,
-		CompatibilityBridgeActive:   true,
-		EvidenceSchema:              evidence.Schema,
-		ProductionCutoverAuthorized: false,
+		CapabilityID:            capabilityID,
+		FromSnapshotFingerprint: expectedFingerprint,
+		ToSnapshotFingerprint:   current.Fingerprint,
 	}
 	path := transitionReceiptPath(receiptStore, probe)
 	existing, err := receiptStore.Load(path)
