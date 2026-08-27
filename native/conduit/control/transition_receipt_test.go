@@ -59,6 +59,7 @@ func TestBuildCapabilityTransitionReceiptRejectsNonTargetChange(t *testing.T) {
 }
 
 func TestCapabilityTransitionReceiptStoreIsImmutableAndOwnerOnly(t *testing.T) {
+	requireProtectedFileStoreTestSupport(t)
 	before, after := testTransitionSnapshots(t)
 	receipt, err := BuildCapabilityTransitionReceipt(before, after, "control-api", IsolatedAcceptanceSchemaV1, time.Date(2026, 8, 27, 10, 17, 0, 0, time.UTC))
 	if err != nil {
