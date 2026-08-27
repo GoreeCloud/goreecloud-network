@@ -9,6 +9,7 @@ import (
 
 func storedTransitionFixture(t *testing.T) (*CapabilityInventoryStore, CapabilityInventorySnapshot) {
 	t.Helper()
+	requireProtectedFileStoreTestSupport(t)
 	store, err := NewCapabilityInventoryStore(filepath.Join(t.TempDir(), "inventory.json"))
 	if err != nil {
 		t.Fatal(err)
