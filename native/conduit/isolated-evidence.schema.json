@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://goreecloud.com/schemas/conduit/isolated-evidence/v1",
+  "title": "GoreeCloud Conduit Isolated Runtime Evidence",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "feature_id",
+    "source_sha",
+    "artifact_digest",
+    "environment",
+    "authority",
+    "compatibility_bridge_active",
+    "production_cutover_authorized",
+    "checks"
+  ],
+  "properties": {
+    "schema": {"const": "goreecloud-conduit-isolated-evidence/v1"},
+    "feature_id": {"type": "string", "minLength": 1},
+    "source_sha": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+    "artifact_digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "environment": {"const": "isolated-staging"},
+    "authority": {"enum": ["inherited", "transitional"]},
+    "compatibility_bridge_active": {"const": true},
+    "production_cutover_authorized": {"const": false},
+    "checks": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["source", "unit", "integration", "security_privacy", "isolated_runtime"],
+      "properties": {
+        "source": {"const": true},
+        "unit": {"const": true},
+        "integration": {"const": true},
+        "security_privacy": {"const": true},
+        "isolated_runtime": {"const": true}
+      }
+    }
+  }
+}
