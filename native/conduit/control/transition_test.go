@@ -2,7 +2,7 @@ package control
 
 import "testing"
 
-func completeIsolatedEvidence(id string) IsolatedAcceptanceEvidence {
+func completeTransitionEvidence(id string) IsolatedAcceptanceEvidence {
 	return IsolatedAcceptanceEvidence{
 		Schema:                    IsolatedAcceptanceSchemaV1,
 		CapabilityID:              id,
@@ -23,7 +23,7 @@ func TestAdvanceToIsolatedValidationPreservesAuthorityAndBridge(t *testing.T) {
 		Authority:                 AuthorityInherited,
 		CompatibilityBridgeActive: true,
 	}
-	next, err := AdvanceToIsolatedValidation(capability, completeIsolatedEvidence(capability.ID))
+	next, err := AdvanceToIsolatedValidation(capability, completeTransitionEvidence(capability.ID))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -40,7 +40,7 @@ func TestAdvanceToIsolatedValidationPreservesAuthorityAndBridge(t *testing.T) {
 
 func TestAdvanceToIsolatedValidationRejectsIncompleteEvidence(t *testing.T) {
 	capability := CapabilityState{ID: "control-api", MigrationStage: "implementation", Authority: AuthorityInherited, CompatibilityBridgeActive: true}
-	evidence := completeIsolatedEvidence(capability.ID)
+	evidence := completeTransitionEvidence(capability.ID)
 	evidence.RollbackRehearsed = false
 	if _, err := AdvanceToIsolatedValidation(capability, evidence); err == nil {
 		t.Fatal("incomplete evidence unexpectedly advanced migration stage")
@@ -49,7 +49,7 @@ func TestAdvanceToIsolatedValidationRejectsIncompleteEvidence(t *testing.T) {
 
 func TestAdvanceToIsolatedValidationRejectsWrongStartingStage(t *testing.T) {
 	capability := CapabilityState{ID: "control-api", MigrationStage: "contract", Authority: AuthorityInherited, CompatibilityBridgeActive: true}
-	if _, err := AdvanceToIsolatedValidation(capability, completeIsolatedEvidence(capability.ID)); err == nil {
+	if _, err := AdvanceToIsolatedValidation(capability, completeTransitionEvidence(capability.ID)); err == nil {
 		t.Fatal("non-implementation stage unexpectedly advanced")
 	}
 }
