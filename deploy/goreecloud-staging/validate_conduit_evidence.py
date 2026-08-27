@@ -14,7 +14,18 @@ EXPECTED_FIELDS = {
     "schema", "feature_id", "source_sha", "artifact_digest", "environment",
     "authority", "compatibility_bridge_active", "production_cutover_authorized", "checks",
 }
-EXPECTED_CHECKS = {"source", "unit", "integration", "security_privacy", "isolated_runtime"}
+EXPECTED_CHECKS = {
+    "source",
+    "immutable_runtime_artifact",
+    "unit",
+    "integration",
+    "state_migration",
+    "backup_restore",
+    "rollback",
+    "client_networking",
+    "security_privacy",
+    "isolated_runtime",
+}
 
 
 def fail(message: str) -> None:
@@ -42,7 +53,7 @@ def validate(payload: object) -> None:
         fail("isolated evidence cannot authorize production cutover")
     checks = payload["checks"]
     if not isinstance(checks, dict) or set(checks) != EXPECTED_CHECKS:
-        fail("Conduit evidence checks must contain exactly the v1 bounded checks")
+        fail("Conduit evidence checks must contain exactly the v1 bounded acceptance checks")
     failed = sorted(name for name, value in checks.items() if value is not True)
     if failed:
         fail(f"Conduit isolated evidence contains incomplete checks: {failed}")
