@@ -16,8 +16,9 @@ import (
 
 // PaddedConn keeps the existing relay protocol unchanged while carrying each
 // relay message in a bounded padded Conduit frame inside authenticated WSS.
-// Runtime obfuscation becomes active only after this connection observes the
-// relay authentication response, not merely after the WebSocket upgrade.
+// Runtime obfuscation becomes active only after this connection observes a
+// structurally valid relay authentication response, not merely after the
+// WebSocket upgrade.
 type PaddedConn struct {
 	*Conn
 
@@ -60,12 +61,10 @@ func (c *PaddedConn) Read(b []byte) (int, error) {
 		c.releaseRuntime(true)
 		return 0, err
 	}
-	if n > 0 {
-		if msgType, msgErr := messages.DetermineServerMessageType(b[:n]); msgErr == nil && msgType == messages.MsgTypeAuthResponse {
-			if err := c.confirmActive(); err != nil {
-				c.releaseRuntime(true)
-				return 0, err
-			}
+	if n > 0 && isValidRelayAuthResponse(b[:n]) {
+		if err := c.confirmActive(); err != nil {
+			c.releaseRuntime(true)
+			return 0, err
 		}
 	}
 	return n, nil
@@ -96,6 +95,18 @@ func (c *PaddedConn) Close() error {
 		c.releaseRuntime(!active)
 	}
 	return c.Conn.Close()
+}
+
+func isValidRelayAuthResponse(msg []byte) bool {
+	if _, err := messages.ValidateVersion(msg); err != nil {
+		return false
+	}
+	msgType, err := messages.DetermineServerMessageType(msg)
+	if err != nil || msgType != messages.MsgTypeAuthResponse {
+		return false
+	}
+	_, err = messages.UnmarshalAuthResponse(msg)
+	return err == nil
 }
 
 func (c *PaddedConn) confirmActive() error {
