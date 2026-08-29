@@ -5,7 +5,6 @@ import (
 	"crypto/rand"
 	"fmt"
 	"net"
-	"time"
 
 	"github.com/coder/websocket"
 
@@ -31,11 +30,7 @@ func (c *PaddedConn) Read(ctx context.Context, b []byte) (int, error) {
 	if t != websocket.MessageBinary {
 		return 0, fmt.Errorf("unexpected message type")
 	}
-	n, err := paddedframe.Read(r, b)
-	if err != nil {
-		return 0, err
-	}
-	return n, nil
+	return paddedframe.Read(r, b)
 }
 
 func (c *PaddedConn) Write(ctx context.Context, b []byte) (int, error) {
@@ -62,5 +57,3 @@ var _ interface {
 	Close() error
 	Protocol() string
 } = (*PaddedConn)(nil)
-
-var _ = time.Second
