@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/netbirdio/netbird/native/conduit/obfuscation/paddedframe"
+	"github.com/netbirdio/netbird/shared/relay/messages"
 )
 
 func TestPrepareURL(t *testing.T) {
@@ -146,5 +147,31 @@ func TestConduitTransportUnavailableResponse(t *testing.T) {
 				t.Fatalf("conduitTransportUnavailableResponse() = %v, want %v", got, tt.want)
 			}
 		})
+	}
+}
+
+func TestValidRelayAuthResponseEvidence(t *testing.T) {
+	valid, err := messages.MarshalAuthResponse("rels://relay.example.com:443")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !isValidRelayAuthResponse(valid) {
+		t.Fatal("valid auth response was not accepted as runtime evidence")
+	}
+
+	wrongVersion := append([]byte(nil), valid...)
+	wrongVersion[0]++
+	if isValidRelayAuthResponse(wrongVersion) {
+		t.Fatal("wrong protocol version was accepted as active evidence")
+	}
+
+	wrongType := append([]byte(nil), valid...)
+	wrongType[1] = byte(messages.MsgTypeHealthCheck)
+	if isValidRelayAuthResponse(wrongType) {
+		t.Fatal("non-auth message was accepted as active evidence")
+	}
+
+	if isValidRelayAuthResponse([]byte{byte(messages.CurrentProtocolVersion), byte(messages.MsgTypeAuthResponse)}) {
+		t.Fatal("truncated auth response was accepted as active evidence")
 	}
 }
