@@ -69,9 +69,11 @@ The endpoint accepts GET only and sends `Cache-Control: no-store`.
 
 `native/conduit/control/staging_status.go` adds a separate evidence-status builder for isolated validation. It emits status only after reloading the exact immutable transition receipt and exact immutable staging-evidence record from their protected stores.
 
-The builder fails closed when transition reconciliation is unresolved, either persisted record is unreadable, the transition receipt no longer binds the inventory snapshot, the staging record does not bind the same transition identity, the staging record predates the transition, or inherited-authority/active-bridge/cutover-false safety invariants diverge.
+The builder fails closed when transition reconciliation is unresolved, either persisted record is unreadable, the transition receipt no longer binds the inventory snapshot, the staging record does not bind the same transition identity, the staging record predates the transition, or inherited-authority/active-bridge/cutover-false safety invariants diverge. `ValidateCapabilityStagingStatus` independently validates the minimized record before any API exposure and requires the current isolated-acceptance schema, a SHA-256 inventory fingerprint, complete durable evidence, inherited authority, an active compatibility bridge, and cutover authorization set to false.
 
-The resulting `goreecloud-conduit-capability-staging-status/v1` record is minimized for Manager, Wardveil Security, Privacy Shield, and GoreeCloud Mesh consumption. It includes the inventory fingerprint and evidence-state booleans but omits capability IDs, source revisions, artifact digests, peers, routes, policies, credentials, packet data, DNS queries, and other operational detail. This builder is evidence plumbing only; it does not expose a new listener and does not change migration authority.
+`native/conduit/control/staging_status_http.go` provides a dedicated GET-only `CapabilityStagingStatusHandler`. It returns `Cache-Control: no-store`, rejects missing/erroring providers and malformed or unsafe status with `503`, rejects mutation methods with `405`, and serializes only the minimized staging-status contract. Tests explicitly reject exposure of capability IDs, source revisions, runtime-artifact digests, peer/route/policy/credential/packet/DNS-query detail.
+
+The resulting `goreecloud-conduit-capability-staging-status/v1` record is minimized for Manager, Wardveil Security, Privacy Shield, GoreeCloud Mesh, Monitor, and other approved central consumers. The handler is a source-level read-only boundary only: it is not mounted on a production listener by this milestone, does not change authority, does not disable the compatibility bridge, and cannot authorize production cutover.
 
 ## Migration classification
 
@@ -90,6 +92,8 @@ The next gate requires an exact-revision staging run that demonstrates:
 - the returned schema and authority values match the source contract;
 - POST and other mutation attempts remain rejected;
 - no sensitive or private network state appears in the payload;
+- persisted transition/staging evidence can be transformed into the minimized staging-status contract without exposing the underlying evidence records;
+- unsafe or incomplete staging status fails closed before response serialization;
 - disabling the Conduit environment switch removes the companion listener without changing inherited management behavior;
 - management startup failure prevents the Conduit companion listener from being exposed;
 - staging teardown cleanly closes both listeners;
