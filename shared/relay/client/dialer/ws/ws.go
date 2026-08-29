@@ -16,6 +16,7 @@ import (
 	nbnet "github.com/netbirdio/netbird/client/net"
 	"github.com/netbirdio/netbird/native/conduit/obfuscation/paddedframe"
 	"github.com/netbirdio/netbird/shared/relay"
+	relaydialer "github.com/netbirdio/netbird/shared/relay/client/dialer"
 	"github.com/netbirdio/netbird/util/embeddedroots"
 )
 
@@ -66,6 +67,12 @@ func (d Dialer) Dial(ctx context.Context, address, serverName string) (net.Conn,
 
 	wsConn, resp, err := websocket.Dial(ctx, wsURL, opts)
 	if err != nil {
+		if resp != nil && resp.Body != nil {
+			_ = resp.Body.Close()
+		}
+		if d.padded && conduitTransportUnavailableResponse(resp) {
+			return nil, fmt.Errorf("%w: Conduit padded WSS endpoint is not offered", relaydialer.ErrTransportUnavailable)
+		}
 		if errors.Is(err, context.Canceled) {
 			return nil, err
 		}
@@ -85,6 +92,17 @@ func (d Dialer) Dial(ctx context.Context, address, serverName string) (net.Conn,
 		return NewPaddedConn(wsConn, address, underlying), nil
 	}
 	return NewConn(wsConn, address, underlying), nil
+}
+
+// conduitTransportUnavailableResponse recognizes only explicit HTTP responses
+// that mean the dedicated Conduit transport endpoint is absent. Network, TLS,
+// proxy, and generic server failures remain transport failures rather than being
+// mislabeled as a capability absence.
+func conduitTransportUnavailableResponse(resp *http.Response) bool {
+	if resp == nil {
+		return false
+	}
+	return resp.StatusCode == http.StatusNotFound || resp.StatusCode == http.StatusMethodNotAllowed
 }
 
 // prepareURL rewrites a rel://host[:port] or rels://host[:port] address into a
