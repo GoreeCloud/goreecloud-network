@@ -1,6 +1,7 @@
 package ws
 
 import (
+	"context"
 	"crypto/rand"
 	"fmt"
 	"net"
@@ -24,7 +25,7 @@ func NewPaddedConn(wsConn *websocket.Conn, serverAddress string, underlying net.
 		}
 	}
 	return &PaddedConn{Conn: &Conn{
-		ctx:        contextBackground(),
+		ctx:        context.Background(),
 		Conn:       wsConn,
 		remoteAddr: addr,
 	}}
@@ -55,7 +56,3 @@ func (c *PaddedConn) Write(b []byte) (int, error) {
 	}
 	return len(b), nil
 }
-
-// Kept as a tiny helper so construction stays parallel to NewConn without
-// exposing Conn.ctx outside this package.
-func contextBackground() context.Context { return context.Background() }
