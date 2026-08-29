@@ -3,9 +3,12 @@ package paddedframe_test
 import (
 	"bytes"
 	"context"
+	"encoding/pem"
 	"net"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -60,9 +63,23 @@ func TestPaddedWSSClientAndServerInteroperate(t *testing.T) {
 		serverErr <- nil
 	})
 
-	srv := httptest.NewServer(h)
+	// The Conduit profile is WSS-only. Trust only this ephemeral test server's
+	// certificate via SSL_CERT_FILE so the production dialer still exercises
+	// normal certificate verification rather than an insecure test bypass.
+	srv := httptest.NewTLSServer(h)
 	defer srv.Close()
-	relayURL := strings.Replace(srv.URL, "http://", "rel://", 1)
+	cert := srv.Certificate()
+	if cert == nil {
+		t.Fatal("test TLS server did not expose a certificate")
+	}
+	certPath := filepath.Join(t.TempDir(), "relay-test-ca.pem")
+	certPEM := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: cert.Raw})
+	if err := os.WriteFile(certPath, certPEM, 0o600); err != nil {
+		t.Fatalf("write test CA: %v", err)
+	}
+	t.Setenv("SSL_CERT_FILE", certPath)
+
+	relayURL := strings.Replace(srv.URL, "https://", "rels://", 1)
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
