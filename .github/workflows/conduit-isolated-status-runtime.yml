@@ -1,0 +1,102 @@
+name: Conduit Isolated Status Runtime
+
+on:
+  pull_request:
+    paths:
+      - "management/cmd/conduit_status.go"
+      - "management/cmd/conduit_status_test.go"
+      - "management/cmd/conduit_status_acceptance_test.go"
+      - ".github/workflows/conduit-isolated-status-runtime.yml"
+  push:
+    branches:
+      - main
+      - "agent/**"
+    paths:
+      - "management/cmd/conduit_status.go"
+      - "management/cmd/conduit_status_test.go"
+      - "management/cmd/conduit_status_acceptance_test.go"
+      - ".github/workflows/conduit-isolated-status-runtime.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  SOURCE_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+
+jobs:
+  isolated-status-runtime:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out exact source revision
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ env.SOURCE_SHA }}
+          persist-credentials: false
+          fetch-depth: 1
+
+      - name: Verify exact source revision
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$SOURCE_SHA"
+
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Build exact Conduit status runtime artifact
+        shell: bash
+        run: |
+          set -euo pipefail
+          go test -c -trimpath -o /tmp/conduit-status-runtime ./management/cmd
+          test -x /tmp/conduit-status-runtime
+
+      - name: Exercise isolated loopback status runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/conduit-status-evidence
+          GOREECLOUD_NETWORK_SOURCE_SHA="$SOURCE_SHA" \
+          GOREECLOUD_CONDUIT_ACCEPTANCE_EVIDENCE=/tmp/conduit-status-evidence/evidence.json \
+            /tmp/conduit-status-runtime \
+              -test.run '^TestConduitStatusIsolatedRuntimeEvidence$' \
+              -test.v
+
+      - name: Validate exact-artifact evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import hashlib
+          import json
+          import os
+          from pathlib import Path
+
+          evidence_path = Path('/tmp/conduit-status-evidence/evidence.json')
+          binary_path = Path('/tmp/conduit-status-runtime')
+          evidence = json.loads(evidence_path.read_text(encoding='utf-8'))
+          digest = hashlib.sha256(binary_path.read_bytes()).hexdigest()
+
+          assert evidence['schema'] == 'goreecloud-conduit-status-isolated-runtime-evidence/v1'
+          assert evidence['source_revision'] == os.environ['SOURCE_SHA'].lower()
+          assert evidence['runtime_artifact_sha256'] == digest
+          assert evidence['listener_scope'] == '127.0.0.1'
+          assert evidence['authority'] == 'inherited'
+          assert evidence['migration_stage'] == 'implementation'
+          assert evidence['compatibility_bridge_active'] is True
+          assert evidence['read_only_validated'] is True
+          assert evidence['minimized_fields_validated'] is True
+          assert evidence['credentials_included'] is False
+          assert evidence['production_cutover_authorized'] is False
+          PY
+
+      - name: Upload sanitized isolated-runtime evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: conduit-isolated-status-runtime-${{ env.SOURCE_SHA }}
+          path: /tmp/conduit-status-evidence/evidence.json
+          if-no-files-found: error
+          retention-days: 30
