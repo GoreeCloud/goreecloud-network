@@ -2,6 +2,8 @@ package ws
 
 import (
 	"testing"
+
+	"github.com/netbirdio/netbird/native/conduit/obfuscation/paddedframe"
 )
 
 func TestPrepareURL(t *testing.T) {
@@ -72,5 +74,54 @@ func TestPrepareURL(t *testing.T) {
 				t.Errorf("prepareURL(%q) = %q, want %q", tt.input, got, tt.want)
 			}
 		})
+	}
+}
+
+func TestPrepareConduitObfuscationURL(t *testing.T) {
+	tests := []struct {
+		name    string
+		input   string
+		want    string
+		wantErr bool
+	}{
+		{
+			name:  "secure relay maps to dedicated padded endpoint",
+			input: "rels://relay.example.com:443",
+			want:  "wss://relay.example.com:443" + paddedframe.URLPath,
+		},
+		{
+			name:    "plaintext relay is rejected",
+			input:   "rel://relay.example.com:80",
+			wantErr: true,
+		},
+		{
+			name:    "ordinary https input is rejected",
+			input:   "https://relay.example.com",
+			wantErr: true,
+		},
+		{
+			name:    "missing host is rejected",
+			input:   "rels://",
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := prepareConduitObfuscationURL(tt.input)
+			if (err != nil) != tt.wantErr {
+				t.Fatalf("prepareConduitObfuscationURL(%q) err = %v, wantErr %v", tt.input, err, tt.wantErr)
+			}
+			if got != tt.want {
+				t.Errorf("prepareConduitObfuscationURL(%q) = %q, want %q", tt.input, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestConduitObfuscationDialerIdentity(t *testing.T) {
+	d := NewConduitObfuscationDialer()
+	if got := d.Protocol(); got != paddedframe.TransportID {
+		t.Fatalf("Protocol() = %q, want %q", got, paddedframe.TransportID)
 	}
 }
