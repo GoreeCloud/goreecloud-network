@@ -35,6 +35,9 @@ func (c *Client) baseDialers(mode TransportMode) []dialer.DialeFn {
 	case TransportModeQUIC:
 		c.log.Infof("%s=quic, using QUIC transport", EnvRelayTransport)
 		return []dialer.DialeFn{quic.Dialer{}}
+	case TransportModeConduitPaddedWSS:
+		c.log.Infof("%s=%s, using exclusive Conduit padded WSS transport", EnvRelayTransport, TransportModeConduitPaddedWSS)
+		return []dialer.DialeFn{ws.NewConduitObfuscationDialer()}
 	}
 
 	all := []dialer.DialeFn{quic.Dialer{}, ws.Dialer{}}
