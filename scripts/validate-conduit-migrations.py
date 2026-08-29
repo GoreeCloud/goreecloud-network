@@ -23,6 +23,7 @@ OPTIONAL_GATES = {
     "dns-resolution",
     "signed-artifact",
     "accessibility",
+    "restrictive-network",
 }
 ALLOWED_STATE_AUTHORITY = {"inherited", "transitional", "native", "none"}
 
