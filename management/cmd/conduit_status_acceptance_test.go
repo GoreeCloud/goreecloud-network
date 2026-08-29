@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
@@ -20,18 +21,18 @@ const conduitStatusAcceptanceSchema = "goreecloud-conduit-status-isolated-runtim
 var exactSourceRevision = regexp.MustCompile(`^[0-9a-f]{40}$`)
 
 type conduitStatusAcceptanceEvidence struct {
-	Schema                       string `json:"schema"`
-	SourceRevision               string `json:"source_revision"`
-	RuntimeArtifactSHA256        string `json:"runtime_artifact_sha256"`
-	ListenerScope                string `json:"listener_scope"`
-	StatusSchema                 string `json:"status_schema"`
-	Authority                    string `json:"authority"`
-	MigrationStage               string `json:"migration_stage"`
-	CompatibilityBridgeActive    bool   `json:"compatibility_bridge_active"`
-	ReadOnlyValidated            bool   `json:"read_only_validated"`
-	MinimizedFieldsValidated     bool   `json:"minimized_fields_validated"`
-	CredentialsIncluded          bool   `json:"credentials_included"`
-	ProductionCutoverAuthorized  bool   `json:"production_cutover_authorized"`
+	Schema                      string `json:"schema"`
+	SourceRevision              string `json:"source_revision"`
+	RuntimeArtifactSHA256       string `json:"runtime_artifact_sha256"`
+	ListenerScope               string `json:"listener_scope"`
+	StatusSchema                string `json:"status_schema"`
+	Authority                   string `json:"authority"`
+	MigrationStage              string `json:"migration_stage"`
+	CompatibilityBridgeActive   bool   `json:"compatibility_bridge_active"`
+	ReadOnlyValidated           bool   `json:"read_only_validated"`
+	MinimizedFieldsValidated    bool   `json:"minimized_fields_validated"`
+	CredentialsIncluded         bool   `json:"credentials_included"`
+	ProductionCutoverAuthorized bool   `json:"production_cutover_authorized"`
 }
 
 func TestConduitStatusIsolatedRuntimeEvidence(t *testing.T) {
