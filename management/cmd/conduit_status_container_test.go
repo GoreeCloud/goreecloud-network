@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"context"
+	"net"
 	"os"
 	"testing"
 	"time"
@@ -13,9 +14,9 @@ const (
 )
 
 // TestConduitStatusContainerBoundaryServer is an opt-in acceptance fixture used
-// by the container runtime workflow.  It exercises the same status-server
+// by the container runtime workflow. It exercises the same status-server
 // wrapper as the management process while keeping the listener bound to an
-// explicit container-local loopback address.  The fixture is deliberately
+// explicit container-local loopback address. The fixture is deliberately
 // unavailable unless both coordination paths are supplied by the workflow.
 func TestConduitStatusContainerBoundaryServer(t *testing.T) {
 	readyPath := os.Getenv(conduitContainerReadyEnv)
@@ -60,5 +61,33 @@ func TestConduitStatusContainerBoundaryServer(t *testing.T) {
 				t.Fatalf("inspect release marker: %v", err)
 			}
 		}
+	}
+}
+
+// TestConduitStatusContainerRequiredModeFailsClosed proves that an enabled
+// Conduit status listener is part of startup success, not a best-effort
+// sidecar. If the required loopback address is unavailable, startup must fail
+// and the inherited management runtime must be stopped again.
+func TestConduitStatusContainerRequiredModeFailsClosed(t *testing.T) {
+	occupied, err := net.Listen("tcp", conduitStatusDefaultAddr)
+	if err != nil {
+		t.Fatalf("occupy required Conduit status address: %v", err)
+	}
+	defer occupied.Close()
+
+	inner := newFakeManagementServer()
+	wrapped := newConduitStatusServer(inner, conduitStatusSettings{
+		enabled: true,
+		addr:    conduitStatusDefaultAddr,
+	})
+	if err := wrapped.Start(context.Background()); err == nil {
+		_ = wrapped.Stop()
+		t.Fatal("required Conduit status startup unexpectedly succeeded with occupied listener")
+	}
+	if !inner.started {
+		t.Fatal("inherited management runtime should start before the listener collision is detected")
+	}
+	if !inner.stopped {
+		t.Fatal("inherited management runtime must be stopped when required Conduit status startup fails")
 	}
 }
