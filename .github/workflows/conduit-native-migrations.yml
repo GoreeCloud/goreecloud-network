@@ -5,7 +5,7 @@ on:
     paths:
       - "native/conduit/**"
       - "relay/server/listener/ws/**"
-      - "shared/relay/client/dialer/ws/**"
+      - "shared/relay/client/**"
       - "management/cmd/conduit_status.go"
       - "management/cmd/conduit_status_test.go"
       - "deploy/goreecloud-staging/acceptance_evidence.py"
@@ -22,7 +22,7 @@ on:
     paths:
       - "native/conduit/**"
       - "relay/server/listener/ws/**"
-      - "shared/relay/client/dialer/ws/**"
+      - "shared/relay/client/**"
       - "management/cmd/conduit_status.go"
       - "management/cmd/conduit_status_test.go"
       - "deploy/goreecloud-staging/acceptance_evidence.py"
@@ -76,8 +76,8 @@ jobs:
       - name: Test first-party Conduit native contracts and profiles
         run: go test ./native/conduit/...
 
-      - name: Test Conduit padded-WSS client and relay integration packages
-        run: go test ./shared/relay/client/dialer/ws ./relay/server/listener/ws
+      - name: Test Conduit padded-WSS relay integration and transport selection
+        run: go test ./shared/relay/client/... ./relay/server/listener/ws
 
       - name: Test Conduit management runtime integration
         run: go test ./management/cmd -run '^TestConduitStatus'
