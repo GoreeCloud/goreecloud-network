@@ -87,6 +87,19 @@ jobs:
           docker image inspect "$CONTAINER_IMAGE:$SOURCE_SHA" --format '{{.Id}}' > .goreecloud-evidence/image-id.txt
           docker image inspect "$CONTAINER_IMAGE:$SOURCE_SHA" --format '{{index .Config.Labels "org.opencontainers.image.revision"}}' | grep -Fx "$SOURCE_SHA"
 
+      - name: Prove required mode fails closed in container
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker run --rm \
+            --read-only \
+            --security-opt no-new-privileges:true \
+            --cap-drop ALL \
+            "$CONTAINER_IMAGE:$SOURCE_SHA" \
+            -test.run '^TestConduitStatusContainerRequiredModeFailsClosed$' \
+            -test.v | tee .goreecloud-evidence/required-mode.log
+          grep -F -- '--- PASS: TestConduitStatusContainerRequiredModeFailsClosed' .goreecloud-evidence/required-mode.log
+
       - name: Start loopback-only Conduit container fixture
         shell: bash
         run: |
@@ -198,6 +211,7 @@ jobs:
               },
               'status': status,
               'read_only_method_boundary_validated': True,
+              'required_mode_fail_closed_validated': True,
               'container_read_only_rootfs': True,
               'container_capabilities_dropped': 'ALL',
               'credentials_included': False,
@@ -224,6 +238,7 @@ jobs:
           name: conduit-container-boundary-${{ env.SOURCE_SHA }}
           path: |
             .goreecloud-evidence/evidence.json
+            .goreecloud-evidence/required-mode.log
             .goreecloud-evidence/container.log
             .goreecloud-evidence/container-exit-code.txt
           if-no-files-found: error
