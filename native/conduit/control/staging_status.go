@@ -94,7 +94,7 @@ func BuildPersistedCapabilityStagingStatus(
 		return CapabilityStagingStatus{}, errors.New("conduit control: persisted staging evidence violates compatibility safety invariants")
 	}
 
-	return CapabilityStagingStatus{
+	status := CapabilityStagingStatus{
 		Schema:                           CapabilityStagingStatusSchemaV1,
 		GeneratedAt:                      now.UTC().Format(time.RFC3339Nano),
 		InventoryFingerprint:             transition.Snapshot.Fingerprint,
@@ -105,5 +105,34 @@ func BuildPersistedCapabilityStagingStatus(
 		Authority:                        AuthorityInherited,
 		CompatibilityBridgeActive:        true,
 		ProductionCutoverAuthorized:      false,
-	}, nil
+	}
+	if err := ValidateCapabilityStagingStatus(status); err != nil {
+		return CapabilityStagingStatus{}, err
+	}
+	return status, nil
+}
+
+// ValidateCapabilityStagingStatus rejects incomplete, malformed, or unsafe
+// minimized status before it is exposed to Manager, Wardveil Security, Privacy
+// Shield, Mesh, Monitor, or other central consumers.
+func ValidateCapabilityStagingStatus(status CapabilityStagingStatus) error {
+	if status.Schema != CapabilityStagingStatusSchemaV1 {
+		return errors.New("conduit control: unsupported capability staging status schema")
+	}
+	if _, err := time.Parse(time.RFC3339Nano, status.GeneratedAt); err != nil {
+		return errors.New("conduit control: capability staging status generated_at is invalid")
+	}
+	if !validSHA256(status.InventoryFingerprint) {
+		return errors.New("conduit control: capability staging status inventory fingerprint is invalid")
+	}
+	if !status.TransitionReceiptPersisted || status.TransitionReconciliationRequired || !status.StagingEvidencePersisted {
+		return errors.New("conduit control: capability staging status durable evidence is incomplete")
+	}
+	if status.AcceptanceSchema != IsolatedAcceptanceSchemaV1 {
+		return errors.New("conduit control: capability staging status acceptance schema is invalid")
+	}
+	if status.Authority != AuthorityInherited || !status.CompatibilityBridgeActive || status.ProductionCutoverAuthorized {
+		return errors.New("conduit control: capability staging status safety invariants are invalid")
+	}
+	return nil
 }
