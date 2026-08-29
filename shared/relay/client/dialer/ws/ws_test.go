@@ -1,6 +1,7 @@
 package ws
 
 import (
+	"net/http"
 	"testing"
 
 	"github.com/netbirdio/netbird/native/conduit/obfuscation/paddedframe"
@@ -123,5 +124,27 @@ func TestConduitObfuscationDialerIdentity(t *testing.T) {
 	d := NewConduitObfuscationDialer()
 	if got := d.Protocol(); got != paddedframe.TransportID {
 		t.Fatalf("Protocol() = %q, want %q", got, paddedframe.TransportID)
+	}
+}
+
+func TestConduitTransportUnavailableResponse(t *testing.T) {
+	tests := []struct {
+		name string
+		resp *http.Response
+		want bool
+	}{
+		{name: "nil response is a transport failure", resp: nil, want: false},
+		{name: "not found means transport is absent", resp: &http.Response{StatusCode: http.StatusNotFound}, want: true},
+		{name: "method not allowed means transport is absent", resp: &http.Response{StatusCode: http.StatusMethodNotAllowed}, want: true},
+		{name: "server error remains a transport failure", resp: &http.Response{StatusCode: http.StatusInternalServerError}, want: false},
+		{name: "upgrade required remains a transport failure", resp: &http.Response{StatusCode: http.StatusUpgradeRequired}, want: false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := conduitTransportUnavailableResponse(tt.resp); got != tt.want {
+				t.Fatalf("conduitTransportUnavailableResponse() = %v, want %v", got, tt.want)
+			}
+		})
 	}
 }
