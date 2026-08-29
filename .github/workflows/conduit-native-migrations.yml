@@ -4,6 +4,7 @@ on:
   pull_request:
     paths:
       - "native/conduit/**"
+      - "client/android/**"
       - "relay/server/listener/ws/**"
       - "shared/relay/client/**"
       - "management/cmd/conduit_status.go"
@@ -21,6 +22,7 @@ on:
       - agent/**
     paths:
       - "native/conduit/**"
+      - "client/android/**"
       - "relay/server/listener/ws/**"
       - "shared/relay/client/**"
       - "management/cmd/conduit_status.go"
@@ -75,6 +77,9 @@ jobs:
 
       - name: Test first-party Conduit native contracts and profiles
         run: go test ./native/conduit/...
+
+      - name: Test Android Conduit gomobile binding contract
+        run: go test ./client/android
 
       - name: Test Conduit padded-WSS relay integration and transport selection
         run: go test ./shared/relay/client/... ./relay/server/listener/ws
