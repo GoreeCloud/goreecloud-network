@@ -69,8 +69,8 @@ jobs:
       - name: Test Conduit isolated-evidence generator
         run: python3 deploy/goreecloud-staging/test_build_conduit_evidence.py
 
-      - name: Test first-party Conduit Control contract
-        run: go test ./native/conduit/control
+      - name: Test first-party Conduit native contracts and profiles
+        run: go test ./native/conduit/...
 
       - name: Test Conduit management runtime integration
         run: go test ./management/cmd -run '^TestConduitStatus'
