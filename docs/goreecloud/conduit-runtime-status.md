@@ -65,6 +65,14 @@ The compatibility bridge forces:
 
 The endpoint accepts GET only and sends `Cache-Control: no-store`.
 
+## Persisted staging evidence status
+
+`native/conduit/control/staging_status.go` adds a separate evidence-status builder for isolated validation. It emits status only after reloading the exact immutable transition receipt and exact immutable staging-evidence record from their protected stores.
+
+The builder fails closed when transition reconciliation is unresolved, either persisted record is unreadable, the transition receipt no longer binds the inventory snapshot, the staging record does not bind the same transition identity, the staging record predates the transition, or inherited-authority/active-bridge/cutover-false safety invariants diverge.
+
+The resulting `goreecloud-conduit-capability-staging-status/v1` record is minimized for Manager, Wardveil Security, Privacy Shield, and GoreeCloud Mesh consumption. It includes the inventory fingerprint and evidence-state booleans but omits capability IDs, source revisions, artifact digests, peers, routes, policies, credentials, packet data, DNS queries, and other operational detail. This builder is evidence plumbing only; it does not expose a new listener and does not change migration authority.
+
 ## Migration classification
 
 This source/runtime wiring is an implementation milestone, not isolated-runtime acceptance.
