@@ -14,19 +14,41 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	nbnet "github.com/netbirdio/netbird/client/net"
+	"github.com/netbirdio/netbird/native/conduit/obfuscation/paddedframe"
 	"github.com/netbirdio/netbird/shared/relay"
 	"github.com/netbirdio/netbird/util/embeddedroots"
 )
 
 type Dialer struct {
+	urlPath  string
+	protocol string
+	padded   bool
+}
+
+// NewConduitObfuscationDialer returns the client-side transport for the
+// first-party Conduit padded-WSS profile. It is not part of the ordinary relay
+// dialer race and therefore cannot be selected accidentally as a fallback.
+func NewConduitObfuscationDialer() Dialer {
+	return Dialer{
+		urlPath:  paddedframe.URLPath,
+		protocol: paddedframe.TransportID,
+		padded:   true,
+	}
 }
 
 func (d Dialer) Protocol() string {
+	if d.protocol != "" {
+		return d.protocol
+	}
 	return Network
 }
 
 func (d Dialer) Dial(ctx context.Context, address, serverName string) (net.Conn, error) {
-	wsURL, err := prepareURL(address)
+	path := d.urlPath
+	if path == "" {
+		path = relay.WebSocketURLPath
+	}
+	wsURL, err := prepareURLPath(address, path)
 	if err != nil {
 		return nil, err
 	}
@@ -51,14 +73,20 @@ func (d Dialer) Dial(ctx context.Context, address, serverName string) (net.Conn,
 		_ = resp.Body.Close()
 	}
 
-	conn := NewConn(wsConn, address, underlying)
-	return conn, nil
+	if d.padded {
+		return NewPaddedConn(wsConn, address, underlying), nil
+	}
+	return NewConn(wsConn, address, underlying), nil
 }
 
 // prepareURL rewrites a rel://host[:port] or rels://host[:port] address into a
 // ws://host[:port]/relay or wss://host[:port]/relay URL, preserving any
 // non-standard port from the input.
 func prepareURL(address string) (string, error) {
+	return prepareURLPath(address, relay.WebSocketURLPath)
+}
+
+func prepareURLPath(address, path string) (string, error) {
 	parsed, err := url.Parse(address)
 	if err != nil {
 		return "", fmt.Errorf("parse relay address %q: %w", address, err)
@@ -74,7 +102,10 @@ func prepareURL(address string) (string, error) {
 	if parsed.Host == "" {
 		return "", fmt.Errorf("missing host in relay address %q", address)
 	}
-	parsed.Path = relay.WebSocketURLPath
+	if path == "" || path[0] != '/' {
+		return "", fmt.Errorf("invalid websocket path %q", path)
+	}
+	parsed.Path = path
 	return parsed.String(), nil
 }
 
