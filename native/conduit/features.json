@@ -26,6 +26,7 @@
     {"id":"signal","inherited":"NetBird signal service","native":"Conduit Signal","status":"planned","replacement_required":true},
     {"id":"relay","inherited":"NetBird relay service","native":"Conduit Relay","status":"planned","replacement_required":true},
     {"id":"path","inherited":"NetBird NAT traversal/direct path orchestration","native":"Conduit Path","status":"planned","replacement_required":true},
+    {"id":"obfuscation","inherited":"No accepted native obfuscation transport; inherited relay/path behavior is compatibility-only and is not obfuscation","native":"Conduit Obfuscation","status":"in-progress","replacement_required":true},
     {"id":"dns-delivery","inherited":"NetBird DNS distribution","native":"Conduit DNS Delivery","status":"planned","replacement_required":true},
     {"id":"activity","inherited":"NetBird events/audit presentation","native":"Conduit Activity","status":"planned","replacement_required":true},
     {"id":"diagnostics","inherited":"NetBird diagnostics/support bundle behavior","native":"Conduit Diagnostics","status":"in-progress","replacement_required":true},
