@@ -85,6 +85,13 @@ func (l *Listener) onAccept(w http.ResponseWriter, r *http.Request) {
 }
 
 func (l *Listener) onAcceptPadded(w http.ResponseWriter, r *http.Request) {
+	// Conduit padded framing is traffic shaping rather than an encryption
+	// primitive. It is valid only inside authenticated TLS/WebSocket, so refuse
+	// to expose this endpoint from a plaintext relay listener.
+	if l.TLSConfig == nil || r.TLS == nil {
+		http.Error(w, "Conduit padded transport requires TLS", http.StatusUpgradeRequired)
+		return
+	}
 	l.acceptWebSocket(w, r, true)
 }
 
