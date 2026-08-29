@@ -14,9 +14,10 @@ import (
 // EnvRelayTransport pins the relay transport. Valid values: "auto" (default,
 // race QUIC and WebSocket), "quic" (QUIC only), "ws" (WebSocket only),
 // "prefer-quic" / "prefer-ws" (try the preferred transport first, fall back to
-// the other only if it fails to connect; no race). The prefer modes trade a
-// slower connect when the preferred transport is blackholed for deterministic
-// transport selection.
+// the other only if it fails to connect; no race), and "conduit-padded-wss"
+// (the first-party Conduit padded WebSocket-over-TLS transport only). The
+// Conduit mode is intentionally exclusive: a failed obfuscation transport must
+// not silently downgrade to ordinary QUIC or WebSocket relay.
 const EnvRelayTransport = "NB_RELAY_TRANSPORT"
 
 const (
@@ -31,11 +32,12 @@ const (
 type TransportMode string
 
 const (
-	TransportModeAuto       TransportMode = "auto"
-	TransportModeQUIC       TransportMode = "quic"
-	TransportModeWS         TransportMode = "ws"
-	TransportModePreferQUIC TransportMode = "prefer-quic"
-	TransportModePreferWS   TransportMode = "prefer-ws"
+	TransportModeAuto             TransportMode = "auto"
+	TransportModeQUIC             TransportMode = "quic"
+	TransportModeWS               TransportMode = "ws"
+	TransportModePreferQUIC       TransportMode = "prefer-quic"
+	TransportModePreferWS         TransportMode = "prefer-ws"
+	TransportModeConduitPaddedWSS TransportMode = "conduit-padded-wss"
 )
 
 // transportModeFromEnv reads EnvRelayTransport, defaulting to auto for an empty
@@ -52,6 +54,8 @@ func transportModeFromEnv() TransportMode {
 		return TransportModePreferQUIC
 	case TransportModePreferWS:
 		return TransportModePreferWS
+	case TransportModeConduitPaddedWSS:
+		return TransportModeConduitPaddedWSS
 	default:
 		log.Warnf("invalid %s value %q, using %q", EnvRelayTransport, os.Getenv(EnvRelayTransport), TransportModeAuto)
 		return TransportModeAuto
@@ -59,9 +63,10 @@ func transportModeFromEnv() TransportMode {
 }
 
 // sequential reports whether the mode tries dialers in order with fallback
-// instead of racing them concurrently.
+// instead of racing them concurrently. The Conduit padded mode has only one
+// dialer, but is treated as sequential to make its no-fallback intent explicit.
 func (m TransportMode) sequential() bool {
-	return m == TransportModePreferQUIC || m == TransportModePreferWS
+	return m == TransportModePreferQUIC || m == TransportModePreferWS || m == TransportModeConduitPaddedWSS
 }
 
 // transportFallback tracks relay servers that have rejected a datagram-sized
