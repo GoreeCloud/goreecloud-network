@@ -15,6 +15,7 @@ import (
 
 	nbnet "github.com/netbirdio/netbird/client/net"
 	"github.com/netbirdio/netbird/native/conduit/obfuscation/paddedframe"
+	obfuscationruntime "github.com/netbirdio/netbird/native/conduit/obfuscation/runtime"
 	"github.com/netbirdio/netbird/shared/relay"
 	relaydialer "github.com/netbirdio/netbird/shared/relay/client/dialer"
 	"github.com/netbirdio/netbird/util/embeddedroots"
@@ -45,6 +46,12 @@ func (d Dialer) Protocol() string {
 }
 
 func (d Dialer) Dial(ctx context.Context, address, serverName string) (net.Conn, error) {
+	if d.padded {
+		if err := obfuscationruntime.Begin(true); err != nil {
+			return nil, err
+		}
+	}
+
 	var (
 		wsURL string
 		err   error
@@ -59,6 +66,9 @@ func (d Dialer) Dial(ctx context.Context, address, serverName string) (net.Conn,
 		wsURL, err = prepareURLPath(address, path)
 	}
 	if err != nil {
+		if d.padded {
+			obfuscationruntime.Failed()
+		}
 		return nil, err
 	}
 
@@ -71,10 +81,14 @@ func (d Dialer) Dial(ctx context.Context, address, serverName string) (net.Conn,
 			_ = resp.Body.Close()
 		}
 		if d.padded && conduitTransportUnavailableResponse(resp) {
+			obfuscationruntime.Unavailable()
 			return nil, fmt.Errorf("%w: Conduit padded WSS endpoint is not offered", relaydialer.ErrTransportUnavailable)
 		}
 		if errors.Is(err, context.Canceled) {
 			return nil, err
+		}
+		if d.padded {
+			obfuscationruntime.Failed()
 		}
 		// websocket.Dial wraps the cause in verbose layers; surface the
 		// underlying network error when present.
@@ -89,6 +103,11 @@ func (d Dialer) Dial(ctx context.Context, address, serverName string) (net.Conn,
 	}
 
 	if d.padded {
+		if err := obfuscationruntime.Negotiating(d.Protocol()); err != nil {
+			obfuscationruntime.Failed()
+			_ = wsConn.Close(websocket.StatusPolicyViolation, "invalid Conduit transport identity")
+			return nil, err
+		}
 		return NewPaddedConn(wsConn, address, underlying), nil
 	}
 	return NewConn(wsConn, address, underlying), nil
