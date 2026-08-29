@@ -44,11 +44,19 @@ func (d Dialer) Protocol() string {
 }
 
 func (d Dialer) Dial(ctx context.Context, address, serverName string) (net.Conn, error) {
-	path := d.urlPath
-	if path == "" {
-		path = relay.WebSocketURLPath
+	var (
+		wsURL string
+		err   error
+	)
+	if d.padded {
+		wsURL, err = prepareConduitObfuscationURL(address)
+	} else {
+		path := d.urlPath
+		if path == "" {
+			path = relay.WebSocketURLPath
+		}
+		wsURL, err = prepareURLPath(address, path)
 	}
-	wsURL, err := prepareURLPath(address, path)
 	if err != nil {
 		return nil, err
 	}
@@ -84,6 +92,25 @@ func (d Dialer) Dial(ctx context.Context, address, serverName string) (net.Conn,
 // non-standard port from the input.
 func prepareURL(address string) (string, error) {
 	return prepareURLPath(address, relay.WebSocketURLPath)
+}
+
+// prepareConduitObfuscationURL builds the dedicated Conduit padded transport
+// endpoint and refuses plaintext rel:// inputs. The padded profile is traffic
+// shaping, not encryption, so it must only operate inside authenticated WSS.
+func prepareConduitObfuscationURL(address string) (string, error) {
+	parsed, err := url.Parse(address)
+	if err != nil {
+		return "", fmt.Errorf("parse relay address %q: %w", address, err)
+	}
+	if parsed.Scheme != "rels" {
+		return "", fmt.Errorf("Conduit padded transport requires rels/WSS, got %q", parsed.Scheme)
+	}
+	if parsed.Host == "" {
+		return "", fmt.Errorf("missing host in relay address %q", address)
+	}
+	parsed.Scheme = "wss"
+	parsed.Path = paddedframe.URLPath
+	return parsed.String(), nil
 }
 
 func prepareURLPath(address, path string) (string, error) {
