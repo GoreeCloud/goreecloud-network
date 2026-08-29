@@ -8,9 +8,9 @@ REGISTRY = ROOT / "native" / "conduit" / "features.json"
 
 REQUIRED_IDS = {
     "control", "api", "devices", "principals", "groups", "access", "posture",
-    "resources", "routes", "enrollment", "signal", "relay", "path", "dns-delivery",
-    "activity", "diagnostics", "console", "android", "desktop", "apple", "release",
-    "commercial-telemetry",
+    "resources", "routes", "enrollment", "signal", "relay", "path", "obfuscation",
+    "dns-delivery", "activity", "diagnostics", "console", "android", "desktop", "apple",
+    "release", "commercial-telemetry",
 }
 ALLOWED_STATUS = {"planned", "in-progress", "native", "retire"}
 
