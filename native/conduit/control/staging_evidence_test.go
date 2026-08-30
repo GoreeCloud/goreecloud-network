@@ -90,14 +90,20 @@ func TestCapabilityStagingEvidenceStoreIsImmutableAndOwnerOnly(t *testing.T) {
 
 func completeStagingAcceptance(capabilityID string) IsolatedAcceptanceEvidence {
 	return IsolatedAcceptanceEvidence{
-		Schema:                    IsolatedAcceptanceSchemaV1,
-		CapabilityID:              capabilityID,
-		ExactSourceRevision:       true,
-		ImmutableRuntimeArtifact:  true,
-		StateMigrationValidated:   true,
-		BackupRestoreProven:       true,
-		RollbackRehearsed:         true,
-		ClientNetworkingValidated: true,
-		SecurityPrivacyValidated:  true,
+		Schema:                         IsolatedAcceptanceSchemaV1,
+		CapabilityID:                   capabilityID,
+		ExactSourceRevision:            true,
+		ImmutableRuntimeArtifact:       true,
+		StateMigrationValidated:        true,
+		BackupRestoreProven:            true,
+		RollbackRehearsed:              true,
+		ClientNetworkingValidated:      true,
+		SecurityPrivacyValidated:       true,
+		PrivacyShieldValidated:         true,
+		WardveilSecurityValidated:      true,
+		EverkeepValidated:              true,
+		MeshCoordinationValidated:      true,
+		IdentityIntegrationValidated:   true,
+		GovernanceIntegrationValidated: true,
 	}
 }
