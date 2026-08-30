@@ -12,15 +12,21 @@ const IsolatedAcceptanceSchemaV1 = "goreecloud-conduit-isolated-acceptance/v1"
 // It intentionally carries no peers, routes, policies, credentials, devices,
 // packet data, DNS queries, or user information.
 type IsolatedAcceptanceEvidence struct {
-	Schema                    string `json:"schema"`
-	CapabilityID              string `json:"capability_id"`
-	ExactSourceRevision       bool   `json:"exact_source_revision"`
-	ImmutableRuntimeArtifact  bool   `json:"immutable_runtime_artifact"`
-	StateMigrationValidated   bool   `json:"state_migration_validated"`
-	BackupRestoreProven       bool   `json:"backup_restore_proven"`
-	RollbackRehearsed         bool   `json:"rollback_rehearsed"`
-	ClientNetworkingValidated bool   `json:"client_networking_validated"`
-	SecurityPrivacyValidated  bool   `json:"security_privacy_validated"`
+	Schema                         string `json:"schema"`
+	CapabilityID                   string `json:"capability_id"`
+	ExactSourceRevision            bool   `json:"exact_source_revision"`
+	ImmutableRuntimeArtifact       bool   `json:"immutable_runtime_artifact"`
+	StateMigrationValidated        bool   `json:"state_migration_validated"`
+	BackupRestoreProven            bool   `json:"backup_restore_proven"`
+	RollbackRehearsed              bool   `json:"rollback_rehearsed"`
+	ClientNetworkingValidated      bool   `json:"client_networking_validated"`
+	SecurityPrivacyValidated       bool   `json:"security_privacy_validated"`
+	PrivacyShieldValidated         bool   `json:"privacy_shield_validated"`
+	WardveilSecurityValidated      bool   `json:"wardveil_security_validated"`
+	EverkeepValidated              bool   `json:"everkeep_validated"`
+	MeshCoordinationValidated      bool   `json:"mesh_coordination_validated"`
+	IdentityIntegrationValidated   bool   `json:"identity_integration_validated"`
+	GovernanceIntegrationValidated bool   `json:"governance_integration_validated"`
 }
 
 // IsolatedAcceptanceDecision is a source-level readiness result. It cannot
@@ -60,6 +66,12 @@ func EvaluateIsolatedAcceptance(capability CapabilityState, evidence IsolatedAcc
 		{"rollback_rehearsed", evidence.RollbackRehearsed},
 		{"client_networking_validated", evidence.ClientNetworkingValidated},
 		{"security_privacy_validated", evidence.SecurityPrivacyValidated},
+		{"privacy_shield_validated", evidence.PrivacyShieldValidated},
+		{"wardveil_security_validated", evidence.WardveilSecurityValidated},
+		{"everkeep_validated", evidence.EverkeepValidated},
+		{"mesh_coordination_validated", evidence.MeshCoordinationValidated},
+		{"identity_integration_validated", evidence.IdentityIntegrationValidated},
+		{"governance_integration_validated", evidence.GovernanceIntegrationValidated},
 	}
 	for _, gate := range gates {
 		if !gate.pass {
