@@ -140,7 +140,7 @@ func prepareConduitObfuscationURL(address string) (string, error) {
 		return "", fmt.Errorf("parse relay address %q: %w", address, err)
 	}
 	if parsed.Scheme != "rels" {
-		return "", fmt.Errorf("Conduit padded transport requires rels/WSS, got %q", parsed.Scheme)
+		return "", fmt.Errorf("conduit padded transport requires rels/WSS, got %q", parsed.Scheme)
 	}
 	if parsed.Host == "" {
 		return "", fmt.Errorf("missing host in relay address %q", address)
