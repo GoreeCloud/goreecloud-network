@@ -15,6 +15,7 @@ on:
       - "deploy/goreecloud-staging/build_conduit_evidence.py"
       - "deploy/goreecloud-staging/test_build_conduit_evidence.py"
       - "scripts/validate-conduit-migrations.py"
+      - "scripts/validate-conduit-recovery.py"
       - ".github/workflows/conduit-native-migrations.yml"
   push:
     branches:
@@ -33,6 +34,7 @@ on:
       - "deploy/goreecloud-staging/build_conduit_evidence.py"
       - "deploy/goreecloud-staging/test_build_conduit_evidence.py"
       - "scripts/validate-conduit-migrations.py"
+      - "scripts/validate-conduit-recovery.py"
       - ".github/workflows/conduit-native-migrations.yml"
   workflow_dispatch:
 
@@ -65,6 +67,9 @@ jobs:
 
       - name: Validate Conduit migration contracts
         run: python3 scripts/validate-conduit-migrations.py
+
+      - name: Validate Conduit recovery contract
+        run: python3 scripts/validate-conduit-recovery.py
 
       - name: Validate Conduit evidence tooling syntax
         run: python3 -m py_compile deploy/goreecloud-staging/validate_conduit_evidence.py deploy/goreecloud-staging/build_conduit_evidence.py deploy/goreecloud-staging/test_build_conduit_evidence.py
