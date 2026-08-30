@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -74,6 +75,13 @@ func (s *CapabilityInventoryRecoveryStore) Save(point CapabilityInventoryRecover
 	if err := os.MkdirAll(s.root, 0o700); err != nil {
 		return "", fmt.Errorf("conduit control: create inventory recovery directory: %w", err)
 	}
+	rootInfo, err := os.Lstat(s.root)
+	if err != nil {
+		return "", fmt.Errorf("conduit control: inspect inventory recovery directory: %w", err)
+	}
+	if !rootInfo.IsDir() || rootInfo.Mode()&os.ModeSymlink != 0 {
+		return "", errors.New("conduit control: inventory recovery root must be a real directory")
+	}
 	if err := os.Chmod(s.root, 0o700); err != nil {
 		return "", fmt.Errorf("conduit control: protect inventory recovery directory: %w", err)
 	}
@@ -118,6 +126,16 @@ func (s *CapabilityInventoryRecoveryStore) Load(snapshotFingerprint string) (Cap
 	if err := requireProtectedFileStoreSupport(); err != nil {
 		return CapabilityInventoryRecoveryPoint{}, err
 	}
+	rootInfo, err := os.Lstat(s.root)
+	if err != nil {
+		return CapabilityInventoryRecoveryPoint{}, err
+	}
+	if !rootInfo.IsDir() || rootInfo.Mode()&os.ModeSymlink != 0 {
+		return CapabilityInventoryRecoveryPoint{}, errors.New("conduit control: inventory recovery root must be a real directory")
+	}
+	if rootInfo.Mode().Perm()&0o077 != 0 {
+		return CapabilityInventoryRecoveryPoint{}, errors.New("conduit control: inventory recovery directory permissions are too broad")
+	}
 	snapshotFingerprint = strings.ToLower(strings.TrimSpace(snapshotFingerprint))
 	if !validPlatformEvidenceHex(snapshotFingerprint, 64) {
 		return CapabilityInventoryRecoveryPoint{}, errors.New("conduit control: recovery snapshot fingerprint is invalid")
@@ -142,6 +160,13 @@ func (s *CapabilityInventoryRecoveryStore) Load(snapshotFingerprint string) (Cap
 	decoder.DisallowUnknownFields()
 	if err := decoder.Decode(&point); err != nil {
 		return CapabilityInventoryRecoveryPoint{}, fmt.Errorf("conduit control: decode inventory recovery point: %w", err)
+	}
+	var trailing any
+	if err := decoder.Decode(&trailing); err != io.EOF {
+		if err == nil {
+			return CapabilityInventoryRecoveryPoint{}, errors.New("conduit control: inventory recovery point contains trailing JSON data")
+		}
+		return CapabilityInventoryRecoveryPoint{}, fmt.Errorf("conduit control: decode trailing inventory recovery data: %w", err)
 	}
 	if err := validateCapabilityInventoryRecoveryPoint(point); err != nil {
 		return CapabilityInventoryRecoveryPoint{}, err
