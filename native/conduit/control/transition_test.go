@@ -4,15 +4,21 @@ import "testing"
 
 func completeTransitionEvidence(id string) IsolatedAcceptanceEvidence {
 	return IsolatedAcceptanceEvidence{
-		Schema:                    IsolatedAcceptanceSchemaV1,
-		CapabilityID:              id,
-		ExactSourceRevision:       true,
-		ImmutableRuntimeArtifact:  true,
-		StateMigrationValidated:   true,
-		BackupRestoreProven:       true,
-		RollbackRehearsed:         true,
-		ClientNetworkingValidated: true,
-		SecurityPrivacyValidated:  true,
+		Schema:                         IsolatedAcceptanceSchemaV1,
+		CapabilityID:                   id,
+		ExactSourceRevision:            true,
+		ImmutableRuntimeArtifact:       true,
+		StateMigrationValidated:        true,
+		BackupRestoreProven:            true,
+		RollbackRehearsed:              true,
+		ClientNetworkingValidated:      true,
+		SecurityPrivacyValidated:       true,
+		PrivacyShieldValidated:         true,
+		WardveilSecurityValidated:      true,
+		EverkeepValidated:              true,
+		MeshCoordinationValidated:      true,
+		IdentityIntegrationValidated:   true,
+		GovernanceIntegrationValidated: true,
 	}
 }
 
