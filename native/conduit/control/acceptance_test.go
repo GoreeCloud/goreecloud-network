@@ -7,6 +7,9 @@ func TestIsolatedAcceptanceFailsClosedWithMissingGates(t *testing.T) {
 	evidence := completeIsolatedEvidence()
 	evidence.RollbackRehearsed = false
 	evidence.BackupRestoreProven = false
+	evidence.MeshCoordinationValidated = false
+	evidence.IdentityIntegrationValidated = false
+	evidence.GovernanceIntegrationValidated = false
 
 	decision, err := EvaluateIsolatedAcceptance(capability, evidence)
 	if err != nil {
@@ -15,8 +18,20 @@ func TestIsolatedAcceptanceFailsClosedWithMissingGates(t *testing.T) {
 	if decision.EligibleForIsolatedValidation {
 		t.Fatal("incomplete evidence unexpectedly became isolated-validation eligible")
 	}
-	if len(decision.MissingGates) != 2 {
-		t.Fatalf("missing gates = %v", decision.MissingGates)
+	want := []string{
+		"backup_restore_proven",
+		"rollback_rehearsed",
+		"mesh_coordination_validated",
+		"identity_integration_validated",
+		"governance_integration_validated",
+	}
+	if len(decision.MissingGates) != len(want) {
+		t.Fatalf("missing gates = %v, want %v", decision.MissingGates, want)
+	}
+	for i := range want {
+		if decision.MissingGates[i] != want[i] {
+			t.Fatalf("missing gates = %v, want %v", decision.MissingGates, want)
+		}
 	}
 	if decision.ProductionCutoverAuthorized {
 		t.Fatal("source acceptance decision authorized production cutover")
@@ -55,14 +70,20 @@ func TestIsolatedAcceptanceRejectsNativeAuthority(t *testing.T) {
 
 func completeIsolatedEvidence() IsolatedAcceptanceEvidence {
 	return IsolatedAcceptanceEvidence{
-		Schema:                    IsolatedAcceptanceSchemaV1,
-		CapabilityID:              "control-api",
-		ExactSourceRevision:       true,
-		ImmutableRuntimeArtifact:  true,
-		StateMigrationValidated:   true,
-		BackupRestoreProven:       true,
-		RollbackRehearsed:         true,
-		ClientNetworkingValidated: true,
-		SecurityPrivacyValidated:  true,
+		Schema:                         IsolatedAcceptanceSchemaV1,
+		CapabilityID:                   "control-api",
+		ExactSourceRevision:            true,
+		ImmutableRuntimeArtifact:       true,
+		StateMigrationValidated:        true,
+		BackupRestoreProven:            true,
+		RollbackRehearsed:              true,
+		ClientNetworkingValidated:      true,
+		SecurityPrivacyValidated:       true,
+		PrivacyShieldValidated:         true,
+		WardveilSecurityValidated:      true,
+		EverkeepValidated:              true,
+		MeshCoordinationValidated:      true,
+		IdentityIntegrationValidated:   true,
+		GovernanceIntegrationValidated: true,
 	}
 }
