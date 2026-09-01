@@ -16,8 +16,8 @@ The in-process management adapter is deliberately narrow:
 
 - `peer-coordination` is verified only after the existing management `Server.Start` succeeds;
 - `access-policy` is verified on the same boundary because the management store, managers, API/gRPC server, and listener must initialize before `Start` returns;
-- `private-connectivity` remains unverified because end-to-end connectivity depends on runtimes outside the management process;
-- `network-dns` remains unverified until a bounded Network DNS runtime adapter is connected.
+- `network-dns` is verified on that same successful-start boundary because construction of the management API handler initializes the zones and DNS-record managers before startup can succeed; the adapter reads none of their zone, record, label, address, account, or tenant content;
+- `private-connectivity` remains unverified because end-to-end connectivity depends on signal/relay and peer runtimes outside the management process.
 
 A successfully started management service therefore reports `partial`, not `ready`. On graceful stop the adapter writes `unavailable`; unexpected process loss is handled by Manager's stale-status fail-closed rule. Runtime evidence never sets `production_approved`.
 
@@ -25,7 +25,7 @@ A successfully started management service therefore reports `partial`, not `read
 
 The status document must not contain access tokens, setup keys, user identities, peer names, peer IDs, peer IP addresses, public keys, routes, ACL rules, DNS labels, activity history, raw logs, or personal records. Aggregate/coarse state may be added only when it cannot be used to reconstruct those identifiers.
 
-The management adapter wraps the existing server lifecycle only. It adds no network listener and does not query the management API, store, peer inventory, route inventory, or user data.
+The management adapter wraps the existing server lifecycle only. It adds no network listener and does not query the management API, store, peer inventory, route inventory, DNS zones/records, or user data.
 
 ## Manager migration
 
@@ -33,15 +33,14 @@ Manager's existing direct NetBird adapter is transitional. The target boundary i
 
 `NetBird-derived runtime -> GoreeCloud Network adapter -> sanitized Infrastructure Status v1 -> GoreeCloud Manager`
 
-Manager remains a read-only observer; Network remains authoritative for network state and policy. The direct NetBird adapter is not removed until private-connectivity and Network DNS evidence are independently available and accepted.
+Manager remains a read-only observer; Network remains authoritative for network state and policy. The direct NetBird adapter is not removed until private-connectivity evidence is independently available and accepted alongside the management-side boundaries.
 
 ## Next implementation slice
 
-1. Add bounded signal/relay evidence for end-to-end private-connectivity readiness without peer or route inventory.
-2. Add bounded Network DNS readiness evidence without labels, names, addresses, or configuration contents.
-3. Complete target-environment connectivity, policy, outage, upgrade/rollback, and privacy acceptance.
-4. Migrate Manager away from the direct NetBird API only after those runtime boundaries are accepted.
-5. Keep `production_approved` false until all target-environment gates pass.
+1. Add bounded signal/relay lifecycle evidence for end-to-end private-connectivity readiness without peer or route inventory.
+2. Complete target-environment connectivity, Network DNS behavior, policy, outage, upgrade/rollback, and privacy acceptance.
+3. Migrate Manager away from the direct NetBird API only after those runtime boundaries are accepted.
+4. Keep `production_approved` false until all target-environment gates pass.
 
 ## Licensing
 
