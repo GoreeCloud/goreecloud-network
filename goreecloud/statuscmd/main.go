@@ -27,7 +27,7 @@ func main() {
 		fatal(mkdirErr)
 	}
 	tmp := path + ".tmp"
-	if writeErr := os.WriteFile(tmp, payload, 0o640); writeErr != nil {
+	if writeErr := os.WriteFile(tmp, payload, 0o600); writeErr != nil {
 		fatal(writeErr)
 	}
 	if renameErr := os.Rename(tmp, path); renameErr != nil {
