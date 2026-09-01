@@ -102,6 +102,16 @@ func TestConduitStatusStartsAfterInheritedRuntimeAndIsReadOnly(t *testing.T) {
 	if status.ProductionCutoverAuthorized {
 		t.Fatal("status must not authorize production cutover")
 	}
+	if status.Availability != control.AvailabilityUnknown {
+		t.Fatalf("availability = %q, want %q", status.Availability, control.AvailabilityUnknown)
+	}
+	if status.AvailabilityReason != control.AvailabilityReasonRuntimeHealthNotObserved {
+		t.Fatalf(
+			"availability_reason = %q, want %q",
+			status.AvailabilityReason,
+			control.AvailabilityReasonRuntimeHealthNotObserved,
+		)
+	}
 
 	var fields map[string]any
 	if err := json.Unmarshal(body, &fields); err != nil {
@@ -110,12 +120,16 @@ func TestConduitStatusStartsAfterInheritedRuntimeAndIsReadOnly(t *testing.T) {
 	allowed := map[string]bool{
 		"schema": true, "generated_at": true, "authority": true,
 		"migration_stage": true, "compatibility_bridge_active": true,
-		"production_cutover_authorized": true,
+		"production_cutover_authorized": true, "availability": true,
+		"availability_reason": true,
 	}
 	for field := range fields {
 		if !allowed[field] {
 			t.Fatalf("unexpected status field %q", field)
 		}
+	}
+	if len(fields) != len(allowed) {
+		t.Fatalf("status fields = %d, want exactly %d privacy-safe fields", len(fields), len(allowed))
 	}
 
 	req, err := http.NewRequest(http.MethodPost, baseURL, nil)
