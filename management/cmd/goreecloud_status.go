@@ -3,6 +3,7 @@ package cmd
 import (
 	"context"
 	"os"
+	"sync"
 	"sync/atomic"
 	"time"
 
@@ -17,11 +18,18 @@ const (
 	goreecloudNetworkStatusInterval = 30 * time.Second
 )
 
-func init() {
-	baseNewServer := newServer
-	newServer = func(cfg *server.Config) server.Server {
-		return newGoreeCloudStatusServer(baseNewServer(cfg), os.Getenv(goreecloudNetworkStatusFileEnv))
-	}
+var goreecloudStatusAdapterOnce sync.Once
+
+// EnableGoreeCloudStatusAdapter wraps management server construction with the
+// fork-only, privacy-minimized local status adapter.  It is safe to call more
+// than once and adds no listener or API dependency.
+func EnableGoreeCloudStatusAdapter() {
+	goreecloudStatusAdapterOnce.Do(func() {
+		baseNewServer := newServer
+		newServer = func(cfg *server.Config) server.Server {
+			return newGoreeCloudStatusServer(baseNewServer(cfg), os.Getenv(goreecloudNetworkStatusFileEnv))
+		}
+	})
 }
 
 type goreecloudStatusServer struct {
