@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 
 	goreecloudstatus "github.com/netbirdio/netbird/goreecloud/status"
@@ -78,8 +79,10 @@ func readGoreeCloudStatusSnapshot(t *testing.T, path string) goreecloudstatus.Sn
 	if err != nil {
 		t.Fatalf("stat status file: %v", err)
 	}
-	if got := info.Mode().Perm(); got != 0o600 {
-		t.Fatalf("status permissions = %o, want 600", got)
+	if runtime.GOOS != "windows" {
+		if got := info.Mode().Perm(); got != 0o600 {
+			t.Fatalf("status permissions = %o, want 600", got)
+		}
 	}
 
 	data, err := os.ReadFile(path)
