@@ -6,6 +6,10 @@ This file distinguishes GoreeCloud-owned Conduit behavior from inherited NetBird
 
 - Native capability and migration registries.
 - Privacy-safe capability inventory and aggregate status.
+- Additive semantic service-availability fields on the existing Conduit status contract, with `unknown`, `inactive`, `available`, `degraded`, and `unavailable` as the accepted availability vocabulary.
+- Fail-closed inherited-runtime status reporting of `unknown / runtime_health_not_observed` until an authoritative Conduit runtime-health producer exists.
+- Validation that rejects connectivity-like values such as `connected` as service availability.
+- Exact privacy-safe eight-field allowlists in isolated and container-boundary acceptance evidence for the Conduit status response.
 - Fail-closed `implementation -> isolated-validation` transition rules.
 - Protected inventory snapshots.
 - Compare-and-swap transitions and immutable transition receipts.
@@ -23,6 +27,7 @@ This file distinguishes GoreeCloud-owned Conduit behavior from inherited NetBird
 
 ## Accepted but not yet complete
 
+- An authoritative runtime-health producer capable of moving Conduit service availability beyond fail-closed `unknown`.
 - Full staging-runtime backup/restore and rollback rehearsal.
 - Final immutable registry image digest retention for dedicated-host acceptance.
 - Real target-environment platform evidence production and consumption.
@@ -35,6 +40,7 @@ This file distinguishes GoreeCloud-owned Conduit behavior from inherited NetBird
 
 ## Explicit non-claims
 
+- Conduit availability is a service-availability semantic family only and does not assert network connectivity, Privacy Shield state, Wardveil Security posture, or Everkeep continuity readiness.
 - A valid platform evidence bundle is not proof that the referenced platform produced valid evidence; the referenced evidence must exist and be accepted separately.
 - NetBird remains production-authoritative.
 - Current Conduit source does not authorize production cutover.
