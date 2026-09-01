@@ -49,11 +49,17 @@ func TestGoreeCloudStatusServerPublishesBoundedManagementEvidence(t *testing.T) 
 	for _, capability := range snapshot.Capabilities {
 		states[capability.ID] = capability.State
 	}
-	if states["peer-coordination"] != "verified" || states["access-policy"] != "verified" {
+	if states["peer-coordination"] != "verified" ||
+		states["access-policy"] != "verified" ||
+		states["network-dns"] != "verified" {
 		t.Fatalf("management capabilities were not verified: %#v", states)
 	}
-	if states["private-connectivity"] != "attention" || states["network-dns"] != "attention" {
-		t.Fatalf("unproven capabilities must remain attention: %#v", states)
+	if states["private-connectivity"] != "attention" {
+		t.Fatalf("unproven private connectivity must remain attention: %#v", states)
+	}
+
+	if snapshot.Acceptance.ProductionApproved || !snapshot.Acceptance.RuntimeAcceptanceRequired {
+		t.Fatal("management evidence must not bypass GoreeCloud acceptance")
 	}
 
 	if err := wrapped.Stop(); err != nil {
