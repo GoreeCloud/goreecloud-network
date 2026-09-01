@@ -16,8 +16,8 @@ import (
 )
 
 const (
-	conduitStatusEnabledEnv = "GOREECLOUD_CONDUIT_STATUS_ENABLED"
-	conduitStatusAddrEnv    = "GOREECLOUD_CONDUIT_STATUS_ADDR"
+	conduitStatusEnabledEnv  = "GOREECLOUD_CONDUIT_STATUS_ENABLED"
+	conduitStatusAddrEnv     = "GOREECLOUD_CONDUIT_STATUS_ADDR"
 	conduitStatusDefaultAddr = "127.0.0.1:9097"
 	conduitStatusPath        = "/goreecloud/conduit/v1/status"
 )
@@ -60,6 +60,8 @@ func (inheritedRuntimeProvider) Status(context.Context) (control.Status, error) 
 		MigrationStage:              "implementation",
 		CompatibilityBridgeActive:   true,
 		ProductionCutoverAuthorized: false,
+		Availability:                control.AvailabilityUnknown,
+		AvailabilityReason:          control.AvailabilityReasonRuntimeHealthNotObserved,
 	}, nil
 }
 
