@@ -21,6 +21,8 @@ func TestCompatibilityBridgeForcesInheritedAuthority(t *testing.T) {
 			MigrationStage:              "implementation",
 			CompatibilityBridgeActive:   false,
 			ProductionCutoverAuthorized: true,
+			Availability:                AvailabilityUnknown,
+			AvailabilityReason:          AvailabilityReasonRuntimeHealthNotObserved,
 		}, nil
 	})}
 
@@ -37,6 +39,9 @@ func TestCompatibilityBridgeForcesInheritedAuthority(t *testing.T) {
 	if status.ProductionCutoverAuthorized {
 		t.Fatal("source contract must not authorize production cutover")
 	}
+	if status.Availability != AvailabilityUnknown || status.AvailabilityReason != AvailabilityReasonRuntimeHealthNotObserved {
+		t.Fatalf("availability = (%q, %q), want fail-closed unknown evidence", status.Availability, status.AvailabilityReason)
+	}
 }
 
 func TestStatusHandlerReadOnlyAndFailClosed(t *testing.T) {
@@ -48,6 +53,8 @@ func TestStatusHandlerReadOnlyAndFailClosed(t *testing.T) {
 			MigrationStage:              "implementation",
 			CompatibilityBridgeActive:   true,
 			ProductionCutoverAuthorized: false,
+			Availability:                AvailabilityUnknown,
+			AvailabilityReason:          AvailabilityReasonRuntimeHealthNotObserved,
 		}, nil
 	})
 	handler := StatusHandler{Provider: provider}
@@ -64,6 +71,9 @@ func TestStatusHandlerReadOnlyAndFailClosed(t *testing.T) {
 	}
 	if status.Schema != SchemaV1 {
 		t.Fatalf("schema = %q, want %q", status.Schema, SchemaV1)
+	}
+	if status.Availability != AvailabilityUnknown || status.AvailabilityReason != AvailabilityReasonRuntimeHealthNotObserved {
+		t.Fatalf("availability = (%q, %q), want fail-closed unknown evidence", status.Availability, status.AvailabilityReason)
 	}
 	if got := response.Header().Get("Cache-Control"); got != "no-store" {
 		t.Fatalf("Cache-Control = %q, want no-store", got)
@@ -85,8 +95,32 @@ func TestValidateStatusRejectsSourceCutoverAuthorization(t *testing.T) {
 		MigrationStage:              "implementation",
 		CompatibilityBridgeActive:   true,
 		ProductionCutoverAuthorized: true,
+		Availability:                AvailabilityUnknown,
+		AvailabilityReason:          AvailabilityReasonRuntimeHealthNotObserved,
 	})
 	if err == nil {
 		t.Fatal("expected production cutover authorization to be rejected")
+	}
+}
+
+func TestValidateStatusRejectsUnsupportedAvailability(t *testing.T) {
+	status := Status{
+		Schema:                      SchemaV1,
+		GeneratedAt:                 time.Unix(1, 0).UTC(),
+		Authority:                   AuthorityInherited,
+		MigrationStage:              "implementation",
+		CompatibilityBridgeActive:   true,
+		ProductionCutoverAuthorized: false,
+		Availability:                "connected",
+		AvailabilityReason:          "transport_reachable",
+	}
+	if err := ValidateStatus(status); err == nil {
+		t.Fatal("expected connectivity-like availability state to be rejected")
+	}
+
+	status.Availability = AvailabilityUnknown
+	status.AvailabilityReason = ""
+	if err := ValidateStatus(status); err == nil {
+		t.Fatal("expected missing availability reason to be rejected")
 	}
 }
