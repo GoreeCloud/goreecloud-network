@@ -3,14 +3,17 @@ package status
 
 import "time"
 
+// SchemaVersion is the current GoreeCloud Infrastructure Status contract version.
 const SchemaVersion = 1
 
+// Producer identifies the GoreeCloud service adapter and current runtime authority.
 type Producer struct {
 	ServiceID        string `json:"service_id"`
 	AdapterID        string `json:"adapter_id"`
 	RuntimeAuthority string `json:"runtime_authority"`
 }
 
+// Privacy declares the sensitive-data classes excluded from a status document.
 type Privacy struct {
 	ContainsCredentials         bool `json:"contains_credentials"`
 	ContainsPersonalData        bool `json:"contains_personal_data"`
@@ -20,16 +23,19 @@ type Privacy struct {
 	ContainsCertificateMaterial bool `json:"contains_certificate_material"`
 }
 
+// Acceptance preserves runtime-acceptance and production-approval boundaries.
 type Acceptance struct {
 	RuntimeAcceptanceRequired bool `json:"runtime_acceptance_required"`
 	ProductionApproved        bool `json:"production_approved"`
 }
 
+// Capability reports one approved coarse-grained Network capability state.
 type Capability struct {
 	ID    string `json:"id"`
 	State string `json:"state"`
 }
 
+// Snapshot is a complete privacy-minimized Infrastructure Status v1 document.
 type Snapshot struct {
 	SchemaVersion int          `json:"schema_version"`
 	Producer      Producer     `json:"producer"`
