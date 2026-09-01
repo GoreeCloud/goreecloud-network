@@ -184,6 +184,7 @@ jobs:
           allowed = {
               'schema', 'generated_at', 'authority', 'migration_stage',
               'compatibility_bridge_active', 'production_cutover_authorized',
+              'availability', 'availability_reason',
           }
           if set(status) != allowed:
               raise SystemExit(f"status field boundary mismatch: {sorted(status)}")
@@ -197,6 +198,10 @@ jobs:
               raise SystemExit('compatibility bridge must remain active')
           if status['production_cutover_authorized'] is not False:
               raise SystemExit('container evidence cannot authorize production cutover')
+          if status['availability'] != 'unknown':
+              raise SystemExit('container runtime must fail closed when runtime health is not observed')
+          if status['availability_reason'] != 'runtime_health_not_observed':
+              raise SystemExit('container runtime must identify the missing runtime-health observation')
 
           evidence = {
               'schema': 'goreecloud-conduit-container-boundary-evidence/v1',
