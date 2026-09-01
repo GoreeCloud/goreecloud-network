@@ -114,10 +114,14 @@ func (s *goreecloudStatusServer) publish(now time.Time) {
 	if s.running.Load() {
 		// A successful management Server.Start means the management store,
 		// managers, gRPC/API server, and listening socket were initialized.
-		// That is sufficient to prove the coordination and policy-service
-		// boundaries, but not end-to-end private connectivity or Network DNS.
+		// The API handler dependency graph constructs the zones and DNS-record
+		// managers before startup succeeds, so coordination, access-policy, and
+		// Network DNS management are proven without reading peer, route, zone,
+		// record, user, token, or other tenant content.  End-to-end private
+		// connectivity still requires independent signal/relay evidence.
 		evidence.PeerCoordinationReady = true
 		evidence.AccessPolicyReady = true
+		evidence.NetworkDNSReady = true
 	}
 
 	if err := goreecloudstatus.WriteFile(s.path, goreecloudstatus.SnapshotFromEvidence(now, evidence)); err != nil {
