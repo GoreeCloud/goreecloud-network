@@ -19,6 +19,7 @@ func main() {
 		}()
 	}
 
+	cmd.EnableGoreeCloudStatusAdapter()
 	if err := cmd.Execute(); err != nil {
 		os.Exit(1)
 	}
