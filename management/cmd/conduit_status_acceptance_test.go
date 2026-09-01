@@ -29,6 +29,8 @@ type conduitStatusAcceptanceEvidence struct {
 	Authority                   string `json:"authority"`
 	MigrationStage              string `json:"migration_stage"`
 	CompatibilityBridgeActive   bool   `json:"compatibility_bridge_active"`
+	Availability                string `json:"availability"`
+	AvailabilityReason          string `json:"availability_reason"`
 	ReadOnlyValidated           bool   `json:"read_only_validated"`
 	MinimizedFieldsValidated    bool   `json:"minimized_fields_validated"`
 	CredentialsIncluded         bool   `json:"credentials_included"`
@@ -93,6 +95,16 @@ func TestConduitStatusIsolatedRuntimeEvidence(t *testing.T) {
 	if status.ProductionCutoverAuthorized {
 		t.Fatal("status must not authorize production cutover")
 	}
+	if status.Availability != control.AvailabilityUnknown {
+		t.Fatalf("availability = %q, want %q", status.Availability, control.AvailabilityUnknown)
+	}
+	if status.AvailabilityReason != control.AvailabilityReasonRuntimeHealthNotObserved {
+		t.Fatalf(
+			"availability_reason = %q, want %q",
+			status.AvailabilityReason,
+			control.AvailabilityReasonRuntimeHealthNotObserved,
+		)
+	}
 
 	var fields map[string]any
 	if err := json.Unmarshal(body, &fields); err != nil {
@@ -101,12 +113,16 @@ func TestConduitStatusIsolatedRuntimeEvidence(t *testing.T) {
 	allowed := map[string]bool{
 		"schema": true, "generated_at": true, "authority": true,
 		"migration_stage": true, "compatibility_bridge_active": true,
-		"production_cutover_authorized": true,
+		"production_cutover_authorized": true, "availability": true,
+		"availability_reason": true,
 	}
 	for field := range fields {
 		if !allowed[field] {
 			t.Fatalf("unexpected status field %q", field)
 		}
+	}
+	if len(fields) != len(allowed) {
+		t.Fatalf("status fields = %d, want exactly %d privacy-safe fields", len(fields), len(allowed))
 	}
 
 	req, err := http.NewRequest(http.MethodPost, baseURL, nil)
@@ -140,6 +156,8 @@ func TestConduitStatusIsolatedRuntimeEvidence(t *testing.T) {
 		Authority:                   string(status.Authority),
 		MigrationStage:              status.MigrationStage,
 		CompatibilityBridgeActive:   status.CompatibilityBridgeActive,
+		Availability:                status.Availability,
+		AvailabilityReason:          status.AvailabilityReason,
 		ReadOnlyValidated:           true,
 		MinimizedFieldsValidated:    true,
 		CredentialsIncluded:         false,
