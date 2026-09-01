@@ -10,7 +10,7 @@ GoreeCloud Network currently retains the NetBird-derived runtime as its connecti
 go run ./goreecloud/statuscmd
 ```
 
-Set `GOREECLOUD_NETWORK_STATUS_FILE=/path/to/network-status.json` to enable the local status handoff. The management-server adapter refreshes the same owner-only atomic file every 30 seconds while that runtime is active.
+Set `GOREECLOUD_NETWORK_STATUS_FILE=/path/to/network-status.json` to enable the local status handoff. The management-server adapter refreshes the same atomic file every 30 seconds while that runtime is active. The writer requests POSIX mode `0600`; on platforms such as Windows where POSIX mode bits are not the native access-control boundary, the configured directory must have an approved ACL that limits access to the intended producer and consumer.
 
 The in-process management adapter is deliberately narrow:
 
