@@ -87,6 +87,8 @@ jobs:
           assert evidence['authority'] == 'inherited'
           assert evidence['migration_stage'] == 'implementation'
           assert evidence['compatibility_bridge_active'] is True
+          assert evidence['availability'] == 'unknown'
+          assert evidence['availability_reason'] == 'runtime_health_not_observed'
           assert evidence['read_only_validated'] is True
           assert evidence['minimized_fields_validated'] is True
           assert evidence['credentials_included'] is False
