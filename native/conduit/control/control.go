@@ -19,9 +19,21 @@ const (
 	AuthorityNative       Authority = "native"
 )
 
+const (
+	AvailabilityUnknown     = "unknown"
+	AvailabilityInactive    = "inactive"
+	AvailabilityAvailable   = "available"
+	AvailabilityDegraded    = "degraded"
+	AvailabilityUnavailable = "unavailable"
+)
+
+const AvailabilityReasonRuntimeHealthNotObserved = "runtime_health_not_observed"
+
 // Status is the privacy-safe, read-only Conduit control-plane status contract.
 // It intentionally contains no peer inventory, policy contents, routes,
 // credentials, tokens, keys, packet data, DNS queries, or raw diagnostics.
+// Availability is service availability only. It must not be interpreted as
+// network connectivity, privacy, security, or continuity state.
 type Status struct {
 	Schema                      string    `json:"schema"`
 	GeneratedAt                 time.Time `json:"generated_at"`
@@ -29,6 +41,8 @@ type Status struct {
 	MigrationStage              string    `json:"migration_stage"`
 	CompatibilityBridgeActive   bool      `json:"compatibility_bridge_active"`
 	ProductionCutoverAuthorized bool      `json:"production_cutover_authorized"`
+	Availability                string    `json:"availability"`
+	AvailabilityReason          string    `json:"availability_reason"`
 }
 
 // Provider supplies the current underlying control-plane state needed to build
@@ -60,6 +74,14 @@ func ValidateStatus(status Status) error {
 	}
 	if status.Authority == AuthorityNative && status.CompatibilityBridgeActive {
 		return errors.New("conduit control: native authority cannot retain an active inherited bridge")
+	}
+	switch status.Availability {
+	case AvailabilityUnknown, AvailabilityInactive, AvailabilityAvailable, AvailabilityDegraded, AvailabilityUnavailable:
+	default:
+		return errors.New("conduit control: invalid availability")
+	}
+	if status.AvailabilityReason == "" {
+		return errors.New("conduit control: availability_reason is required")
 	}
 	return nil
 }
