@@ -10,6 +10,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/netbirdio/netbird/client/iface"
+	"github.com/netbirdio/netbird/native/conduit/obfuscation/paddedframe"
 	"github.com/netbirdio/netbird/shared/relay/client/dialer"
 	netErr "github.com/netbirdio/netbird/shared/relay/client/dialer/net"
 	"github.com/netbirdio/netbird/shared/relay/client/dialer/quic"
@@ -21,6 +22,7 @@ import (
 func TestDatagramSizedCapability(t *testing.T) {
 	assert.True(t, dialer.IsDatagramSized(quic.Dialer{}), "QUIC must advertise datagram-sized")
 	assert.False(t, dialer.IsDatagramSized(ws.Dialer{}), "WebSocket must not advertise datagram-sized")
+	assert.False(t, dialer.IsDatagramSized(ws.NewConduitObfuscationDialer()), "Conduit padded WSS must not advertise datagram-sized")
 }
 
 func protocols(dialers []dialer.DialeFn) []string {
@@ -46,6 +48,8 @@ func TestGetDialers(t *testing.T) {
 		{name: "quic pinned", mode: "quic", mtu: iface.DefaultMTU, want: []string{"quic"}},
 		{name: "prefer-quic orders quic first", mode: "prefer-quic", mtu: iface.DefaultMTU, want: []string{"quic", "ws"}},
 		{name: "prefer-ws orders ws first", mode: "prefer-ws", mtu: iface.DefaultMTU, want: []string{"ws", "quic"}},
+		{name: "Conduit padded WSS is exclusive", mode: "conduit-padded-wss", mtu: iface.DefaultMTU, want: []string{paddedframe.TransportID}},
+		{name: "Conduit padded WSS ignores sticky ordinary fallback", mode: "conduit-padded-wss", mtu: iface.DefaultMTU, preferWS: true, want: []string{paddedframe.TransportID}},
 		{name: "mtu above default forces ws", mode: "auto", mtu: iface.DefaultMTU + 100, want: []string{"ws"}},
 		{name: "sticky fallback forces ws in auto", mode: "auto", mtu: iface.DefaultMTU, preferWS: true, want: []string{"ws"}},
 		{name: "sticky fallback forces ws in prefer-quic", mode: "prefer-quic", mtu: iface.DefaultMTU, preferWS: true, want: []string{"ws"}},

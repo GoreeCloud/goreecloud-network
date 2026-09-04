@@ -1,0 +1,103 @@
+name: Conduit Native Migration Contract
+
+on:
+  pull_request:
+    paths:
+      - "native/conduit/**"
+      - "client/android/**"
+      - "relay/server/listener/ws/**"
+      - "shared/relay/client/**"
+      - "management/cmd/conduit_status.go"
+      - "management/cmd/conduit_status_test.go"
+      - "deploy/goreecloud-staging/acceptance_evidence.py"
+      - "deploy/goreecloud-staging/test_acceptance_evidence.py"
+      - "deploy/goreecloud-staging/validate_conduit_evidence.py"
+      - "deploy/goreecloud-staging/build_conduit_evidence.py"
+      - "deploy/goreecloud-staging/test_build_conduit_evidence.py"
+      - "deploy/goreecloud-staging/recovery_evidence.py"
+      - "deploy/goreecloud-staging/test_recovery_evidence.py"
+      - "scripts/validate-conduit-migrations.py"
+      - "scripts/validate-conduit-recovery.py"
+      - ".github/workflows/conduit-native-migrations.yml"
+  push:
+    branches:
+      - main
+      - agent/**
+    paths:
+      - "native/conduit/**"
+      - "client/android/**"
+      - "relay/server/listener/ws/**"
+      - "shared/relay/client/**"
+      - "management/cmd/conduit_status.go"
+      - "management/cmd/conduit_status_test.go"
+      - "deploy/goreecloud-staging/acceptance_evidence.py"
+      - "deploy/goreecloud-staging/test_acceptance_evidence.py"
+      - "deploy/goreecloud-staging/validate_conduit_evidence.py"
+      - "deploy/goreecloud-staging/build_conduit_evidence.py"
+      - "deploy/goreecloud-staging/test_build_conduit_evidence.py"
+      - "deploy/goreecloud-staging/recovery_evidence.py"
+      - "deploy/goreecloud-staging/test_recovery_evidence.py"
+      - "scripts/validate-conduit-migrations.py"
+      - "scripts/validate-conduit-recovery.py"
+      - ".github/workflows/conduit-native-migrations.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: Validate migration registry and native control
+    runs-on: ubuntu-latest
+    env:
+      SOURCE_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+    steps:
+      - name: Check out exact source revision
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ env.SOURCE_SHA }}
+          persist-credentials: false
+          fetch-depth: 1
+
+      - name: Verify exact source revision
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "SOURCE_SHA=${SOURCE_SHA}"
+          test "$(git rev-parse HEAD)" = "${SOURCE_SHA}"
+
+      - name: Validate Conduit native-feature registry
+        run: python3 scripts/validate-conduit-native-features.py
+
+      - name: Validate Conduit migration contracts
+        run: python3 scripts/validate-conduit-migrations.py
+
+      - name: Validate Conduit recovery contract
+        run: python3 scripts/validate-conduit-recovery.py
+
+      - name: Validate Conduit evidence tooling syntax
+        run: python3 -m py_compile deploy/goreecloud-staging/validate_conduit_evidence.py deploy/goreecloud-staging/build_conduit_evidence.py deploy/goreecloud-staging/test_build_conduit_evidence.py deploy/goreecloud-staging/recovery_evidence.py deploy/goreecloud-staging/test_recovery_evidence.py
+
+      - name: Validate Conduit isolated-evidence example end to end
+        run: python3 deploy/goreecloud-staging/validate_conduit_evidence.py native/conduit/isolated-evidence.example.json
+
+      - name: Test Conduit isolated-evidence generator
+        run: python3 deploy/goreecloud-staging/test_build_conduit_evidence.py
+
+      - name: Test Conduit staging recovery evidence contract
+        run: python3 deploy/goreecloud-staging/test_recovery_evidence.py
+
+      - name: Test first-party Conduit native contracts and profiles
+        run: go test ./native/conduit/...
+
+      - name: Test Android Conduit gomobile binding contract
+        run: go test ./client/android
+
+      - name: Test Conduit padded-WSS relay integration and transport selection
+        run: go test ./shared/relay/client/... ./relay/server/listener/ws
+
+      - name: Test Conduit management runtime integration
+        run: go test ./management/cmd -run '^TestConduitStatus'
+
+      - name: Test sanitized Conduit runtime evidence boundary
+        run: python3 deploy/goreecloud-staging/test_acceptance_evidence.py

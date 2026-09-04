@@ -15,12 +15,19 @@ concurrency:
   group: goreecloud-staging-config-${{ github.ref }}
   cancel-in-progress: true
 
+env:
+  GOREECLOUD_NETWORK_SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+
 jobs:
   validate-staging-harness:
     runs-on: ubuntu-latest
     steps:
-      - name: Check out source
+      - name: Check out exact source
         uses: actions/checkout@v5
+        with:
+          ref: ${{ env.GOREECLOUD_NETWORK_SOURCE_SHA }}
+      - name: Verify exact source
+        run: test "$(git rev-parse HEAD)" = "$GOREECLOUD_NETWORK_SOURCE_SHA"
 
       - name: Validate Python and shell syntax
         run: |
@@ -38,7 +45,7 @@ jobs:
           STAGING_ALLOW_NON_LOOPBACK=false
           STAGING_DOMAIN=network-staging.invalid
           STAGING_DNS_DOMAIN=network-staging.invalid
-          GOREECLOUD_NETWORK_SOURCE_SHA=${{ github.sha }}
+          GOREECLOUD_NETWORK_SOURCE_SHA=${{ env.GOREECLOUD_NETWORK_SOURCE_SHA }}
           GOREECLOUD_NETWORK_DASHBOARD_SOURCE_SHA=bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
           GOREECLOUD_NETWORK_ANDROID_SOURCE_SHA=cccccccccccccccccccccccccccccccccccccccc
           GOREECLOUD_NETWORK_ANDROID_ARTIFACT_SHA256=dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd
@@ -103,7 +110,8 @@ jobs:
           evidence_path = Path('runtime/acceptance-evidence.json')
           evidence = json.loads(evidence_path.read_text(encoding='utf-8'))
           assert evidence['schema'] == 'goreecloud-network-acceptance-evidence/v1'
-          assert evidence['source']['control_plane_sha'] == '${{ github.sha }}'.lower()
+          assert evidence['source']['control_plane_sha'] == '${{ env.GOREECLOUD_NETWORK_SOURCE_SHA }}'.lower()
+          assert evidence['source']['repository_head_sha'] == '${{ env.GOREECLOUD_NETWORK_SOURCE_SHA }}'.lower()
           assert evidence['android']['required_for_this_manifest'] is True
           assert evidence['assertions']['credentials_included'] is False
           serialized = evidence_path.read_text(encoding='utf-8')

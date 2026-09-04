@@ -1,0 +1,40 @@
+{
+  "schema": "goreecloud-conduit-native-features/v1",
+  "policy": "native-by-destination",
+  "product": "GoreeCloud Network",
+  "capability_identity": "GoreeCloud Conduit",
+  "production_migration_authorized": false,
+  "standards_dependencies": [
+    {
+      "name": "WireGuard",
+      "classification": "standards-based cryptographic tunnel primitive",
+      "native_reimplementation_required": false,
+      "reason": "Mature cryptographic primitives are not rewritten merely for branding; GoreeCloud owns the product feature layer around them."
+    }
+  ],
+  "features": [
+    {"id":"control","inherited":"NetBird management/control plane","native":"Conduit Control","status":"planned","replacement_required":true},
+    {"id":"api","inherited":"NetBird management API","native":"Conduit API","status":"planned","replacement_required":true},
+    {"id":"devices","inherited":"NetBird peers/devices","native":"Conduit Devices","status":"planned","replacement_required":true},
+    {"id":"principals","inherited":"NetBird users/service users network model","native":"Conduit Principals","status":"planned","replacement_required":true},
+    {"id":"groups","inherited":"NetBird groups","native":"Conduit Groups","status":"planned","replacement_required":true},
+    {"id":"access","inherited":"NetBird access policies","native":"Conduit Access","status":"planned","replacement_required":true},
+    {"id":"posture","inherited":"NetBird posture checks","native":"Conduit Posture","status":"planned","replacement_required":true},
+    {"id":"resources","inherited":"NetBird networks/resources","native":"Conduit Resources","status":"planned","replacement_required":true},
+    {"id":"routes","inherited":"NetBird routes/routing peers","native":"Conduit Routes","status":"planned","replacement_required":true},
+    {"id":"enrollment","inherited":"NetBird setup keys/enrollment","native":"Conduit Enrollment","status":"planned","replacement_required":true},
+    {"id":"signal","inherited":"NetBird signal service","native":"Conduit Signal","status":"planned","replacement_required":true},
+    {"id":"relay","inherited":"NetBird relay service","native":"Conduit Relay","status":"planned","replacement_required":true},
+    {"id":"path","inherited":"NetBird NAT traversal/direct path orchestration","native":"Conduit Path","status":"planned","replacement_required":true},
+    {"id":"obfuscation","inherited":"No accepted native obfuscation transport; inherited relay/path behavior is compatibility-only and is not obfuscation","native":"Conduit Obfuscation","status":"in-progress","replacement_required":true},
+    {"id":"dns-delivery","inherited":"NetBird DNS distribution","native":"Conduit DNS Delivery","status":"planned","replacement_required":true},
+    {"id":"activity","inherited":"NetBird events/audit presentation","native":"Conduit Activity","status":"planned","replacement_required":true},
+    {"id":"diagnostics","inherited":"NetBird diagnostics/support bundle behavior","native":"Conduit Diagnostics","status":"in-progress","replacement_required":true},
+    {"id":"console","inherited":"NetBird dashboard product layer","native":"Conduit Console","status":"in-progress","replacement_required":true},
+    {"id":"android","inherited":"NetBird Android product layer","native":"Conduit Android","status":"in-progress","replacement_required":true},
+    {"id":"desktop","inherited":"NetBird desktop client product layer","native":"Conduit Desktop","status":"planned","replacement_required":true},
+    {"id":"apple","inherited":"Upstream Apple client product layer","native":"Conduit Apple","status":"planned","replacement_required":true},
+    {"id":"release","inherited":"NetBird release/update assumptions","native":"Conduit Release","status":"in-progress","replacement_required":true},
+    {"id":"commercial-telemetry","inherited":"Analytics, marketing, hosted commercial/cloud-only surfaces","native":null,"status":"retire","replacement_required":false}
+  ]
+}

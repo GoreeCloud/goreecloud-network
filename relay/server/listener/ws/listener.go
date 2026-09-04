@@ -12,6 +12,7 @@ import (
 	"github.com/coder/websocket"
 	log "github.com/sirupsen/logrus"
 
+	"github.com/netbirdio/netbird/native/conduit/obfuscation/paddedframe"
 	"github.com/netbirdio/netbird/relay/protocol"
 	relaylistener "github.com/netbirdio/netbird/relay/server/listener"
 	"github.com/netbirdio/netbird/shared/relay"
@@ -40,6 +41,7 @@ func (l *Listener) Listen(acceptFn func(conn relaylistener.Conn)) error {
 	l.acceptFn = acceptFn
 	mux := http.NewServeMux()
 	mux.HandleFunc(URLPath, l.onAccept)
+	mux.HandleFunc(paddedframe.URLPath, l.onAcceptPadded)
 
 	l.server = &http.Server{
 		Addr:              l.Address,
@@ -79,6 +81,21 @@ func (l *Listener) Shutdown(ctx context.Context) error {
 }
 
 func (l *Listener) onAccept(w http.ResponseWriter, r *http.Request) {
+	l.acceptWebSocket(w, r, false)
+}
+
+func (l *Listener) onAcceptPadded(w http.ResponseWriter, r *http.Request) {
+	// Conduit padded framing is traffic shaping rather than an encryption
+	// primitive. It is valid only inside authenticated TLS/WebSocket, so refuse
+	// to expose this endpoint from a plaintext relay listener.
+	if l.TLSConfig == nil || r.TLS == nil {
+		http.Error(w, "Conduit padded transport requires TLS", http.StatusUpgradeRequired)
+		return
+	}
+	l.acceptWebSocket(w, r, true)
+}
+
+func (l *Listener) acceptWebSocket(w http.ResponseWriter, r *http.Request, padded bool) {
 	connRemoteAddr := remoteAddr(r, l.TrustedProxies)
 
 	acceptOptions := &websocket.AcceptOptions{
@@ -100,10 +117,14 @@ func (l *Listener) onAccept(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	log.Infof("WS client connected from: %s", rAddr)
+	if padded {
+		log.Infof("Conduit padded WS client connected from: %s", rAddr)
+		l.acceptFn(NewPaddedConn(wsConn, rAddr))
+		return
+	}
 
-	conn := NewConn(wsConn, rAddr)
-	l.acceptFn(conn)
+	log.Infof("WS client connected from: %s", rAddr)
+	l.acceptFn(NewConn(wsConn, rAddr))
 }
 
 func remoteAddr(r *http.Request, trustedProxies *trustedproxy.List) string {

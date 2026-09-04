@@ -11,6 +11,9 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}-${{ github.head_ref || github.actor_id }}
   cancel-in-progress: true
 
+env:
+  XMOBILE_VERSION: v0.0.0-20251113184115-a159579294ab
+
 jobs:
   android_build:
     name: "Android / Build"
@@ -41,12 +44,14 @@ jobs:
           key: ndk-cache-23.1.7779620
       - name: Setup NDK
         run: /usr/local/lib/android/sdk/cmdline-tools/7.0/bin/sdkmanager --install "ndk;23.1.7779620"
-      - name: install gomobile
-        run: go install golang.org/x/mobile/cmd/gomobile@v0.0.0-20251113184115-a159579294ab
-      - name: gomobile init
-        run: gomobile init
-      - name: build android netbird lib
-        run: PATH=$PATH:$(go env GOPATH) gomobile bind -o $GITHUB_WORKSPACE/netbird.aar -javapkg=io.netbird.gomobile -ldflags="-checklinkname=0 -X golang.zx2c4.com/wireguard/ipc.socketDirectory=/data/data/io.netbird.client/cache/wireguard -X github.com/netbirdio/netbird/version.version=buildtest"  $GITHUB_WORKSPACE/client/android
+      - name: Install pinned gomobile toolchain
+        run: |
+          set -euo pipefail
+          go install golang.org/x/mobile/cmd/gomobile@${XMOBILE_VERSION}
+          go install golang.org/x/mobile/cmd/gobind@${XMOBILE_VERSION}
+          echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
+      - name: Build Android NetBird library
+        run: gomobile bind -o $GITHUB_WORKSPACE/netbird.aar -javapkg=io.netbird.gomobile -ldflags="-checklinkname=0 -X golang.zx2c4.com/wireguard/ipc.socketDirectory=/data/data/io.netbird.client/cache/wireguard -X github.com/netbirdio/netbird/version.version=buildtest" $GITHUB_WORKSPACE/client/android
         env:
           CGO_ENABLED: 0
           ANDROID_NDK_HOME: /usr/local/lib/android/sdk/ndk/23.1.7779620
@@ -62,11 +67,13 @@ jobs:
         uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
         with:
           go-version-file: "go.mod"
-      - name: install gomobile
-        run: go install golang.org/x/mobile/cmd/gomobile@v0.0.0-20251113184115-a159579294ab
-      - name: gomobile init
-        run: gomobile init
-      - name: build iOS netbird lib
-        run: PATH=$PATH:$(go env GOPATH) gomobile bind -target=ios -bundleid=io.netbird.framework -ldflags="-X github.com/netbirdio/netbird/version.version=buildtest" -o ./NetBirdSDK.xcframework ./client/ios/NetBirdSDK
+      - name: Install pinned gomobile toolchain
+        run: |
+          set -euo pipefail
+          go install golang.org/x/mobile/cmd/gomobile@${XMOBILE_VERSION}
+          go install golang.org/x/mobile/cmd/gobind@${XMOBILE_VERSION}
+          echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
+      - name: Build iOS NetBird library
+        run: gomobile bind -target=ios -bundleid=io.netbird.framework -ldflags="-X github.com/netbirdio/netbird/version.version=buildtest" -o ./NetBirdSDK.xcframework ./client/ios/NetBirdSDK
         env:
           CGO_ENABLED: 0

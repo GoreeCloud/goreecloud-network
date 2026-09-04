@@ -37,6 +37,8 @@ func TestTransportModeFromEnv(t *testing.T) {
 		{" Ws ", TransportModeWS},
 		{"prefer-quic", TransportModePreferQUIC},
 		{"prefer-ws", TransportModePreferWS},
+		{"conduit-padded-wss", TransportModeConduitPaddedWSS},
+		{" CONDUIT-PADDED-WSS ", TransportModeConduitPaddedWSS},
 		{"garbage", TransportModeAuto},
 	}
 
@@ -49,6 +51,10 @@ func TestTransportModeFromEnv(t *testing.T) {
 			assert.Equal(t, tc.want, transportModeFromEnv())
 		})
 	}
+}
+
+func TestConduitPaddedWSSModeIsExplicitlySequential(t *testing.T) {
+	assert.True(t, TransportModeConduitPaddedWSS.sequential())
 }
 
 func TestTransportFallbackRecordAndExpiry(t *testing.T) {

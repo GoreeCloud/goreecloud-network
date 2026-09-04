@@ -1,7 +1,11 @@
 package ws
 
 import (
+	"net/http"
 	"testing"
+
+	"github.com/netbirdio/netbird/native/conduit/obfuscation/paddedframe"
+	"github.com/netbirdio/netbird/shared/relay/messages"
 )
 
 func TestPrepareURL(t *testing.T) {
@@ -72,5 +76,102 @@ func TestPrepareURL(t *testing.T) {
 				t.Errorf("prepareURL(%q) = %q, want %q", tt.input, got, tt.want)
 			}
 		})
+	}
+}
+
+func TestPrepareConduitObfuscationURL(t *testing.T) {
+	tests := []struct {
+		name    string
+		input   string
+		want    string
+		wantErr bool
+	}{
+		{
+			name:  "secure relay maps to dedicated padded endpoint",
+			input: "rels://relay.example.com:443",
+			want:  "wss://relay.example.com:443" + paddedframe.URLPath,
+		},
+		{
+			name:    "plaintext relay is rejected",
+			input:   "rel://relay.example.com:80",
+			wantErr: true,
+		},
+		{
+			name:    "ordinary https input is rejected",
+			input:   "https://relay.example.com",
+			wantErr: true,
+		},
+		{
+			name:    "missing host is rejected",
+			input:   "rels://",
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := prepareConduitObfuscationURL(tt.input)
+			if (err != nil) != tt.wantErr {
+				t.Fatalf("prepareConduitObfuscationURL(%q) err = %v, wantErr %v", tt.input, err, tt.wantErr)
+			}
+			if got != tt.want {
+				t.Errorf("prepareConduitObfuscationURL(%q) = %q, want %q", tt.input, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestConduitObfuscationDialerIdentity(t *testing.T) {
+	d := NewConduitObfuscationDialer()
+	if got := d.Protocol(); got != paddedframe.TransportID {
+		t.Fatalf("Protocol() = %q, want %q", got, paddedframe.TransportID)
+	}
+}
+
+func TestConduitTransportUnavailableResponse(t *testing.T) {
+	tests := []struct {
+		name string
+		resp *http.Response
+		want bool
+	}{
+		{name: "nil response is a transport failure", resp: nil, want: false},
+		{name: "not found means transport is absent", resp: &http.Response{StatusCode: http.StatusNotFound}, want: true},
+		{name: "method not allowed means transport is absent", resp: &http.Response{StatusCode: http.StatusMethodNotAllowed}, want: true},
+		{name: "server error remains a transport failure", resp: &http.Response{StatusCode: http.StatusInternalServerError}, want: false},
+		{name: "upgrade required remains a transport failure", resp: &http.Response{StatusCode: http.StatusUpgradeRequired}, want: false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := conduitTransportUnavailableResponse(tt.resp); got != tt.want {
+				t.Fatalf("conduitTransportUnavailableResponse() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestValidRelayAuthResponseEvidence(t *testing.T) {
+	valid, err := messages.MarshalAuthResponse("rels://relay.example.com:443")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !isValidRelayAuthResponse(valid) {
+		t.Fatal("valid auth response was not accepted as runtime evidence")
+	}
+
+	wrongVersion := append([]byte(nil), valid...)
+	wrongVersion[0]++
+	if isValidRelayAuthResponse(wrongVersion) {
+		t.Fatal("wrong protocol version was accepted as active evidence")
+	}
+
+	wrongType := append([]byte(nil), valid...)
+	wrongType[1] = byte(messages.MsgTypeHealthCheck)
+	if isValidRelayAuthResponse(wrongType) {
+		t.Fatal("non-auth message was accepted as active evidence")
+	}
+
+	if isValidRelayAuthResponse([]byte{byte(messages.CurrentProtocolVersion), byte(messages.MsgTypeAuthResponse)}) {
+		t.Fatal("truncated auth response was accepted as active evidence")
 	}
 }

@@ -42,6 +42,15 @@ ANDROID_VALUES = (
 FULL_SHA = re.compile(r"^[0-9a-fA-F]{40}$")
 SHA256 = re.compile(r"^[0-9a-fA-F]{64}$")
 IMAGE_DIGEST = re.compile(r"@sha256:([0-9a-fA-F]{64})$")
+CONDUIT_STATUS_SCHEMA = "goreecloud-conduit-control-status/v1"
+CONDUIT_STATUS_FIELDS = {
+    "schema",
+    "generated_at",
+    "authority",
+    "migration_stage",
+    "compatibility_bridge_active",
+    "production_cutover_authorized",
+}
 
 
 def sha256_file(path: Path) -> str:
@@ -107,7 +116,45 @@ def verify_repository_head(expected_sha: str) -> str | None:
     return actual.lower() if actual else None
 
 
-def collect(require_android: bool, output: Path) -> None:
+def validate_conduit_status(path: Path) -> dict[str, object]:
+    if not path.is_file():
+        fail(f"Conduit runtime status evidence is missing: {path}")
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeError, json.JSONDecodeError) as exc:
+        fail(f"Conduit runtime status evidence is not valid JSON: {exc}")
+
+    if not isinstance(payload, dict):
+        fail("Conduit runtime status evidence must be a JSON object")
+    fields = set(payload)
+    if fields != CONDUIT_STATUS_FIELDS:
+        missing = sorted(CONDUIT_STATUS_FIELDS - fields)
+        extra = sorted(fields - CONDUIT_STATUS_FIELDS)
+        fail(f"Conduit runtime status field boundary mismatch; missing={missing}, extra={extra}")
+    if payload["schema"] != CONDUIT_STATUS_SCHEMA:
+        fail("Conduit runtime status schema is not the accepted v1 contract")
+    if payload["authority"] != "inherited":
+        fail("Conduit runtime status must retain inherited authority during this acceptance stage")
+    if payload["migration_stage"] != "implementation":
+        fail("Conduit runtime status must remain at implementation until isolated validation is accepted")
+    if payload["compatibility_bridge_active"] is not True:
+        fail("Conduit compatibility bridge must remain active during isolated runtime evidence collection")
+    if payload["production_cutover_authorized"] is not False:
+        fail("Conduit runtime evidence must never authorize production cutover")
+    generated_at = payload["generated_at"]
+    if not isinstance(generated_at, str) or not generated_at.strip():
+        fail("Conduit runtime status must include a non-empty generation timestamp")
+    try:
+        parsed = datetime.fromisoformat(generated_at.replace("Z", "+00:00"))
+    except ValueError:
+        fail("Conduit runtime status generation timestamp must be ISO-8601")
+    if parsed.tzinfo is None:
+        fail("Conduit runtime status generation timestamp must include a timezone")
+
+    return payload
+
+
+def collect(require_android: bool, output: Path, conduit_status_json: Path | None) -> None:
     values = parse_dotenv(ENV_PATH)
     require(values, SOURCE_VALUES)
     ensure_nonproduction(values)
@@ -137,6 +184,16 @@ def collect(require_android: bool, output: Path) -> None:
             "GOREECLOUD_NETWORK_ANDROID_ARTIFACT_SHA256", android_artifact
         )
 
+    conduit_status: dict[str, object] = {
+        "attached": False,
+        "payload_sha256": None,
+        "payload": None,
+    }
+    if conduit_status_json is not None:
+        conduit_status["attached"] = True
+        conduit_status["payload_sha256"] = sha256_file(conduit_status_json)
+        conduit_status["payload"] = validate_conduit_status(conduit_status_json)
+
     files = {
         "compose_yaml": ROOT / "compose.yaml",
         "management_json": RUNTIME / "management.json",
@@ -164,6 +221,7 @@ def collect(require_android: bool, output: Path) -> None:
         "configuration_sha256": {
             key: sha256_file(path) for key, path in files.items()
         },
+        "conduit_status": conduit_status,
         "runtime": {
             "platform": platform.platform(),
             "python": platform.python_version(),
@@ -175,6 +233,7 @@ def collect(require_android: bool, output: Path) -> None:
             "production_markers_rejected_by_staging_preflight": True,
             "credentials_included": False,
             "production_migration_authorized": False,
+            "conduit_runtime_status_does_not_advance_migration_stage": True,
         },
     }
 
@@ -191,6 +250,10 @@ def collect(require_android: bool, output: Path) -> None:
         print(f"android source: {android['source_sha']}")
     else:
         print("android source: not yet attached")
+    if conduit_status["attached"]:
+        print(f"Conduit status evidence: attached ({conduit_status['payload_sha256']})")
+    else:
+        print("Conduit status evidence: not attached")
     print("This manifest records evidence identity only; it does not authorize production migration.")
 
 
@@ -204,6 +267,11 @@ def main() -> None:
         help="fail unless exact Android source and APK/AAB SHA-256 evidence is supplied",
     )
     collect_parser.add_argument(
+        "--conduit-status-json",
+        type=Path,
+        help="attach a captured loopback-local Conduit status response after strict contract validation",
+    )
+    collect_parser.add_argument(
         "--output",
         type=Path,
         default=RUNTIME / "acceptance-evidence.json",
@@ -212,7 +280,7 @@ def main() -> None:
     args = parser.parse_args()
 
     if args.command == "collect":
-        collect(args.require_android, args.output)
+        collect(args.require_android, args.output, args.conduit_status_json)
 
 
 if __name__ == "__main__":

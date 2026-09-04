@@ -1,0 +1,255 @@
+name: Conduit Container Boundary Runtime
+
+on:
+  pull_request:
+    paths:
+      - "management/cmd/conduit_status.go"
+      - "management/cmd/conduit_status_test.go"
+      - "management/cmd/conduit_status_acceptance_test.go"
+      - "management/cmd/conduit_status_container_test.go"
+      - "management/Dockerfile"
+      - "deploy/goreecloud-staging/compose.yaml"
+      - ".github/workflows/conduit-container-boundary-runtime.yml"
+  push:
+    branches:
+      - main
+      - "agent/**"
+    paths:
+      - "management/cmd/conduit_status.go"
+      - "management/cmd/conduit_status_test.go"
+      - "management/cmd/conduit_status_acceptance_test.go"
+      - "management/cmd/conduit_status_container_test.go"
+      - "management/Dockerfile"
+      - "deploy/goreecloud-staging/compose.yaml"
+      - ".github/workflows/conduit-container-boundary-runtime.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  SOURCE_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+  CONTAINER_NAME: goreecloud-conduit-boundary
+  CONTAINER_IMAGE: goreecloud-conduit-boundary-runtime
+
+jobs:
+  container-boundary-runtime:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out exact source revision
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ env.SOURCE_SHA }}
+          persist-credentials: false
+          fetch-depth: 1
+
+      - name: Verify exact source revision
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$SOURCE_SHA"
+
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Build exact container-boundary runtime artifact
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p .goreecloud-ci
+          go test -c -trimpath -o .goreecloud-ci/conduit-container-runtime ./management/cmd
+          test -x .goreecloud-ci/conduit-container-runtime
+          sha256sum .goreecloud-ci/conduit-container-runtime | tee .goreecloud-ci/runtime.sha256
+
+          cat > .goreecloud-ci/Dockerfile <<'EOF'
+          FROM ubuntu:24.04
+          COPY conduit-container-runtime /usr/local/bin/conduit-container-runtime
+          ENTRYPOINT ["/usr/local/bin/conduit-container-runtime"]
+          EOF
+
+      - name: Build exact-source boundary image
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker build \
+            --label "org.opencontainers.image.revision=$SOURCE_SHA" \
+            --label "goreecloud.environment=isolated-staging" \
+            --label "goreecloud.production-cutover-authorized=false" \
+            --tag "$CONTAINER_IMAGE:$SOURCE_SHA" \
+            .goreecloud-ci
+
+          mkdir -p .goreecloud-evidence
+          chmod 0777 .goreecloud-evidence
+          docker image inspect "$CONTAINER_IMAGE:$SOURCE_SHA" --format '{{.Id}}' > .goreecloud-evidence/image-id.txt
+          docker image inspect "$CONTAINER_IMAGE:$SOURCE_SHA" --format '{{index .Config.Labels "org.opencontainers.image.revision"}}' | grep -Fx "$SOURCE_SHA"
+
+      - name: Prove required mode fails closed in container
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker run --rm \
+            --read-only \
+            --security-opt no-new-privileges:true \
+            --cap-drop ALL \
+            "$CONTAINER_IMAGE:$SOURCE_SHA" \
+            -test.run '^TestConduitStatusContainerRequiredModeFailsClosed$' \
+            -test.v | tee .goreecloud-evidence/required-mode.log
+          grep -F -- '--- PASS: TestConduitStatusContainerRequiredModeFailsClosed' .goreecloud-evidence/required-mode.log
+
+      - name: Start loopback-only Conduit container fixture
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker run --detach \
+            --name "$CONTAINER_NAME" \
+            --read-only \
+            --security-opt no-new-privileges:true \
+            --cap-drop ALL \
+            --volume "$PWD/.goreecloud-evidence:/evidence" \
+            --env GOREECLOUD_CONDUIT_CONTAINER_READY=/evidence/ready \
+            --env GOREECLOUD_CONDUIT_CONTAINER_RELEASE=/evidence/release \
+            "$CONTAINER_IMAGE:$SOURCE_SHA" \
+            -test.run '^TestConduitStatusContainerBoundaryServer$' \
+            -test.v
+
+          for attempt in $(seq 1 100); do
+            if [[ -f .goreecloud-evidence/ready ]]; then
+              exit 0
+            fi
+            if ! docker inspect "$CONTAINER_NAME" --format '{{.State.Running}}' | grep -Fx true >/dev/null; then
+              docker logs "$CONTAINER_NAME" >&2 || true
+              exit 1
+            fi
+            sleep 0.1
+          done
+          docker logs "$CONTAINER_NAME" >&2 || true
+          echo "Conduit container fixture did not become ready" >&2
+          exit 1
+
+      - name: Prove status port is not host-published
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -z "$(docker port "$CONTAINER_NAME")"
+          python3 - <<'PY'
+          import json
+          import subprocess
+
+          raw = subprocess.check_output([
+              "docker", "inspect", "goreecloud-conduit-boundary",
+              "--format", "{{json .NetworkSettings.Ports}}",
+          ], text=True).strip()
+          ports = json.loads(raw) if raw and raw != "null" else {}
+          if ports:
+              raise SystemExit(f"unexpected published/exposed ports: {ports}")
+          PY
+
+      - name: Probe from the container network namespace
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker run --rm \
+            --network "container:$CONTAINER_NAME" \
+            --volume "$PWD/.goreecloud-evidence:/evidence" \
+            curlimages/curl:8.12.1 \
+            --fail --silent --show-error \
+            http://127.0.0.1:9097/goreecloud/conduit/v1/status \
+            --output /evidence/status.json
+
+          post_status="$(docker run --rm \
+            --network "container:$CONTAINER_NAME" \
+            curlimages/curl:8.12.1 \
+            --silent --output /dev/null --write-out '%{http_code}' \
+            --request POST \
+            http://127.0.0.1:9097/goreecloud/conduit/v1/status)"
+          test "$post_status" = "405"
+
+      - name: Validate container-boundary contract and write evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          export RUNTIME_SHA256="$(cut -d' ' -f1 .goreecloud-ci/runtime.sha256)"
+          export IMAGE_ID="$(cat .goreecloud-evidence/image-id.txt)"
+          export COMPOSE_SHA256="$(sha256sum deploy/goreecloud-staging/compose.yaml | cut -d' ' -f1)"
+          python3 - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          status = json.loads(Path('.goreecloud-evidence/status.json').read_text(encoding='utf-8'))
+          allowed = {
+              'schema', 'generated_at', 'authority', 'migration_stage',
+              'compatibility_bridge_active', 'production_cutover_authorized',
+              'availability', 'availability_reason',
+          }
+          if set(status) != allowed:
+              raise SystemExit(f"status field boundary mismatch: {sorted(status)}")
+          if status['schema'] != 'goreecloud-conduit-control-status/v1':
+              raise SystemExit('unexpected Conduit status schema')
+          if status['authority'] != 'inherited':
+              raise SystemExit('container runtime must retain inherited authority')
+          if status['migration_stage'] != 'implementation':
+              raise SystemExit('container runtime must remain at implementation stage')
+          if status['compatibility_bridge_active'] is not True:
+              raise SystemExit('compatibility bridge must remain active')
+          if status['production_cutover_authorized'] is not False:
+              raise SystemExit('container evidence cannot authorize production cutover')
+          if status['availability'] != 'unknown':
+              raise SystemExit('container runtime must fail closed when runtime health is not observed')
+          if status['availability_reason'] != 'runtime_health_not_observed':
+              raise SystemExit('container runtime must identify the missing runtime-health observation')
+
+          evidence = {
+              'schema': 'goreecloud-conduit-container-boundary-evidence/v1',
+              'source_revision': os.environ['SOURCE_SHA'].lower(),
+              'runtime_artifact_sha256': os.environ['RUNTIME_SHA256'],
+              'container_image_id': os.environ['IMAGE_ID'],
+              'staging_compose_sha256': os.environ['COMPOSE_SHA256'],
+              'listener': {
+                  'address': '127.0.0.1:9097',
+                  'host_published': False,
+                  'probe_network_mode': 'container-namespace',
+              },
+              'status': status,
+              'read_only_method_boundary_validated': True,
+              'required_mode_fail_closed_validated': True,
+              'container_read_only_rootfs': True,
+              'container_capabilities_dropped': 'ALL',
+              'credentials_included': False,
+              'production_cutover_authorized': False,
+          }
+          Path('.goreecloud-evidence/evidence.json').write_text(
+              json.dumps(evidence, indent=2, sort_keys=True) + '\n',
+              encoding='utf-8',
+          )
+          PY
+
+      - name: Release fixture and require clean exit
+        shell: bash
+        run: |
+          set -euo pipefail
+          touch .goreecloud-evidence/release
+          timeout 20s docker wait "$CONTAINER_NAME" > .goreecloud-evidence/container-exit-code.txt
+          test "$(cat .goreecloud-evidence/container-exit-code.txt)" = "0"
+          docker logs "$CONTAINER_NAME" | tee .goreecloud-evidence/container.log
+
+      - name: Upload sanitized container-boundary evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: conduit-container-boundary-${{ env.SOURCE_SHA }}
+          path: |
+            .goreecloud-evidence/evidence.json
+            .goreecloud-evidence/required-mode.log
+            .goreecloud-evidence/container.log
+            .goreecloud-evidence/container-exit-code.txt
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Cleanup container fixture
+        if: always()
+        shell: bash
+        run: docker rm -f "$CONTAINER_NAME" >/dev/null 2>&1 || true
