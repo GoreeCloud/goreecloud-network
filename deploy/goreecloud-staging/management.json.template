@@ -1,0 +1,101 @@
+{
+  "Stuns": [
+    {
+      "Proto": "udp",
+      "URI": "stun:${STAGING_DOMAIN}:${STAGING_TURN_PORT}",
+      "Username": "",
+      "Password": null
+    }
+  ],
+  "TURNConfig": {
+    "Turns": [
+      {
+        "Proto": "udp",
+        "URI": "turn:${STAGING_DOMAIN}:${STAGING_TURN_PORT}",
+        "Username": "${STAGING_TURN_USER}",
+        "Password": "${STAGING_TURN_PASSWORD}"
+      }
+    ],
+    "CredentialsTTL": "12h",
+    "Secret": "${STAGING_TURN_PASSWORD}",
+    "TimeBasedCredentials": false
+  },
+  "Relay": {
+    "Addresses": ["${STAGING_RELAY_ENDPOINT}"],
+    "CredentialsTTL": "24h",
+    "Secret": "${STAGING_RELAY_AUTH_SECRET}"
+  },
+  "Signal": {
+    "Proto": "https",
+    "URI": "${STAGING_SIGNAL_ENDPOINT}",
+    "Username": "",
+    "Password": null
+  },
+  "ReverseProxy": {
+    "TrustedHTTPProxies": [],
+    "TrustedHTTPProxiesCount": 0,
+    "TrustedPeers": []
+  },
+  "DisableDefaultPolicy": ${STAGING_DISABLE_DEFAULT_POLICY},
+  "Datadir": "",
+  "DataStoreEncryptionKey": "${STAGING_DATASTORE_ENC_KEY}",
+  "StoreConfig": {
+    "Engine": "${STAGING_STORE_ENGINE}"
+  },
+  "HttpConfig": {
+    "Address": "0.0.0.0:443",
+    "AuthIssuer": "${STAGING_AUTH_AUTHORITY}",
+    "AuthAudience": "${STAGING_AUTH_AUDIENCE}",
+    "AuthKeysLocation": "${STAGING_AUTH_JWT_CERTS}",
+    "AuthUserIDClaim": "${STAGING_AUTH_USER_ID_CLAIM}",
+    "CertFile": "/etc/letsencrypt/live/${STAGING_DOMAIN}/fullchain.pem",
+    "CertKey": "/etc/letsencrypt/live/${STAGING_DOMAIN}/privkey.pem",
+    "IdpSignKeyRefreshEnabled": true,
+    "OIDCConfigEndpoint": "${STAGING_AUTH_AUTHORITY}/.well-known/openid-configuration"
+  },
+  "IdpManagerConfig": {
+    "ManagerType": "${STAGING_IDP_MANAGER_TYPE}",
+    "ClientConfig": {
+      "Issuer": "${STAGING_AUTH_AUTHORITY}",
+      "TokenEndpoint": "${STAGING_AUTH_TOKEN_ENDPOINT}",
+      "ClientID": "${STAGING_IDP_MGMT_CLIENT_ID}",
+      "ClientSecret": "${STAGING_IDP_MGMT_CLIENT_SECRET}",
+      "GrantType": "client_credentials"
+    },
+    "ExtraConfig": ${STAGING_IDP_MGMT_EXTRA_CONFIG},
+    "Auth0ClientCredentials": null,
+    "AzureClientCredentials": null,
+    "KeycloakClientCredentials": null,
+    "ZitadelClientCredentials": null
+  },
+  "DeviceAuthorizationFlow": {
+    "Provider": "${STAGING_AUTH_DEVICE_AUTH_PROVIDER}",
+    "ProviderConfig": {
+      "Audience": "${STAGING_AUTH_AUDIENCE}",
+      "AuthorizationEndpoint": "",
+      "Domain": "",
+      "ClientID": "${STAGING_AUTH_DEVICE_AUTH_CLIENT_ID}",
+      "ClientSecret": "",
+      "TokenEndpoint": "${STAGING_AUTH_TOKEN_ENDPOINT}",
+      "DeviceAuthEndpoint": "${STAGING_AUTH_DEVICE_AUTH_ENDPOINT}",
+      "Scope": "${STAGING_AUTH_DEVICE_AUTH_SCOPE}",
+      "UseIDToken": false,
+      "RedirectURLs": null
+    }
+  },
+  "PKCEAuthorizationFlow": {
+    "ProviderConfig": {
+      "Audience": "${STAGING_AUTH_AUDIENCE}",
+      "ClientID": "${STAGING_AUTH_CLIENT_ID}",
+      "ClientSecret": "${STAGING_AUTH_CLIENT_SECRET}",
+      "Domain": "",
+      "AuthorizationEndpoint": "${STAGING_AUTH_PKCE_AUTHORIZATION_ENDPOINT}",
+      "TokenEndpoint": "${STAGING_AUTH_TOKEN_ENDPOINT}",
+      "Scope": "${STAGING_AUTH_SUPPORTED_SCOPES}",
+      "RedirectURLs": [${STAGING_AUTH_PKCE_REDIRECT_URLS}],
+      "UseIDToken": false,
+      "DisablePromptLogin": false,
+      "LoginFlag": 0
+    }
+  }
+}

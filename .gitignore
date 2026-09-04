@@ -29,6 +29,8 @@ client/client.exe
 client/.distfiles/
 infrastructure_files/setup.env
 infrastructure_files/setup-*.env
+# GoreeCloud isolated staging renders credentials and generated runtime configuration here.
+deploy/goreecloud-staging/runtime/
 .vscode
 .DS_Store
 vendor/

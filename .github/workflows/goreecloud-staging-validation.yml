@@ -1,0 +1,139 @@
+name: GoreeCloud staging configuration validation
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+      - 'agent/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: goreecloud-staging-config-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate-staging-harness:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v5
+
+      - name: Validate Python and shell syntax
+        run: |
+          python3 -m py_compile deploy/goreecloud-staging/config_tool.py
+          python3 -m py_compile deploy/goreecloud-staging/acceptance_evidence.py
+          bash -n deploy/goreecloud-staging/render-config.sh
+          bash -n deploy/goreecloud-staging/validate-staging.sh
+
+      - name: Create disposable staging-only environment
+        working-directory: deploy/goreecloud-staging
+        run: |
+          cat > .env <<'EOF'
+          COMPOSE_PROJECT_NAME=goreecloud-network-staging
+          STAGING_BIND_ADDRESS=127.0.0.1
+          STAGING_ALLOW_NON_LOOPBACK=false
+          STAGING_DOMAIN=network-staging.invalid
+          STAGING_DNS_DOMAIN=network-staging.invalid
+          GOREECLOUD_NETWORK_SOURCE_SHA=${{ github.sha }}
+          GOREECLOUD_NETWORK_DASHBOARD_SOURCE_SHA=bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+          GOREECLOUD_NETWORK_ANDROID_SOURCE_SHA=cccccccccccccccccccccccccccccccccccccccc
+          GOREECLOUD_NETWORK_ANDROID_ARTIFACT_SHA256=dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd
+          GOREECLOUD_NETWORK_MANAGEMENT_IMAGE=example.invalid/goreecloud/network-management@sha256:1111111111111111111111111111111111111111111111111111111111111111
+          GOREECLOUD_NETWORK_SIGNAL_IMAGE=example.invalid/goreecloud/network-signal@sha256:2222222222222222222222222222222222222222222222222222222222222222
+          GOREECLOUD_NETWORK_RELAY_IMAGE=example.invalid/goreecloud/network-relay@sha256:3333333333333333333333333333333333333333333333333333333333333333
+          GOREECLOUD_NETWORK_DASHBOARD_IMAGE=example.invalid/goreecloud/network-dashboard@sha256:4444444444444444444444444444444444444444444444444444444444444444
+          GOREECLOUD_NETWORK_COTURN_IMAGE=example.invalid/goreecloud/coturn@sha256:5555555555555555555555555555555555555555555555555555555555555555
+          STAGING_DASHBOARD_HTTP_PORT=18080
+          STAGING_DASHBOARD_HTTPS_PORT=18443
+          STAGING_MANAGEMENT_PORT=13300
+          STAGING_SIGNAL_PORT=10000
+          STAGING_RELAY_PORT=13301
+          STAGING_TURN_PORT=13478
+          STAGING_MANAGEMENT_ENDPOINT=https://network-staging.invalid:13300
+          STAGING_SIGNAL_ENDPOINT=network-staging.invalid:10000
+          STAGING_RELAY_ENDPOINT=rel://network-staging.invalid:13301
+          STAGING_TURN_ENDPOINT=network-staging.invalid:13478
+          STAGING_AUTH_AUDIENCE=goreecloud-network-staging
+          STAGING_AUTH_CLIENT_ID=staging-dashboard
+          STAGING_AUTH_CLIENT_SECRET=staging-not-a-real-secret
+          STAGING_AUTH_AUTHORITY=https://identity-staging.invalid
+          STAGING_AUTH_JWT_CERTS=https://identity-staging.invalid/.well-known/jwks.json
+          STAGING_AUTH_TOKEN_ENDPOINT=https://identity-staging.invalid/oauth/token
+          STAGING_AUTH_DEVICE_AUTH_PROVIDER=hosted
+          STAGING_AUTH_DEVICE_AUTH_ENDPOINT=https://identity-staging.invalid/oauth/device
+          STAGING_AUTH_DEVICE_AUTH_CLIENT_ID=staging-device
+          STAGING_AUTH_DEVICE_AUTH_SCOPE=openid
+          STAGING_AUTH_PKCE_AUTHORIZATION_ENDPOINT=https://identity-staging.invalid/oauth/authorize
+          STAGING_AUTH_PKCE_REDIRECT_URLS='"https://network-staging.invalid/callback"'
+          STAGING_AUTH_SUPPORTED_SCOPES=openid profile email offline_access
+          STAGING_AUTH_USER_ID_CLAIM=sub
+          STAGING_IDP_MANAGER_TYPE=none
+          STAGING_IDP_MGMT_CLIENT_ID=staging-manager
+          STAGING_IDP_MGMT_CLIENT_SECRET=staging-not-a-real-secret
+          STAGING_IDP_MGMT_EXTRA_CONFIG=null
+          STAGING_DATASTORE_ENC_KEY=staging-datastore-encryption-key-not-real
+          STAGING_RELAY_AUTH_SECRET=staging-relay-secret-not-real
+          STAGING_TURN_USER=goreecloud-staging
+          STAGING_TURN_PASSWORD=staging-turn-password-not-real
+          STAGING_DISABLE_DEFAULT_POLICY=true
+          STAGING_DISABLE_ANONYMOUS_METRICS=true
+          STAGING_STORE_ENGINE=sqlite
+          STAGING_POSTGRES_DSN=
+          STAGING_MYSQL_DSN=
+          EOF
+
+      - name: Render and validate isolated staging configuration
+        working-directory: deploy/goreecloud-staging
+        run: |
+          python3 config_tool.py render
+          python3 config_tool.py validate
+
+      - name: Collect source-bound sanitized acceptance evidence
+        working-directory: deploy/goreecloud-staging
+        run: |
+          python3 acceptance_evidence.py collect --require-android
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          evidence_path = Path('runtime/acceptance-evidence.json')
+          evidence = json.loads(evidence_path.read_text(encoding='utf-8'))
+          assert evidence['schema'] == 'goreecloud-network-acceptance-evidence/v1'
+          assert evidence['source']['control_plane_sha'] == '${{ github.sha }}'.lower()
+          assert evidence['android']['required_for_this_manifest'] is True
+          assert evidence['assertions']['credentials_included'] is False
+          serialized = evidence_path.read_text(encoding='utf-8')
+          for forbidden in (
+              'staging-not-a-real-secret',
+              'staging-datastore-encryption-key-not-real',
+              'staging-relay-secret-not-real',
+              'staging-turn-password-not-real',
+          ):
+              assert forbidden not in serialized
+          PY
+
+      - name: Reject production markers from deployable staging values
+        shell: bash
+        run: |
+          set -euo pipefail
+          files=(
+            deploy/goreecloud-staging/compose.yaml
+            deploy/goreecloud-staging/.env.example
+            deploy/goreecloud-staging/management.json.template
+            deploy/goreecloud-staging/turnserver.conf.template
+          )
+
+          # Safety documentation may name a forbidden production marker in a comment
+          # to explain what must not be reused. Only executable/configuration values
+          # are prohibited by this source-level scan; config_tool.py separately
+          # rejects production markers from the populated staging environment and
+          # rendered runtime configuration.
+          if grep -h -v -E '^[[:space:]]*#' "${files[@]}" \
+            | grep -n -E 'netbird\.goreecloud\.com|100\.71\.27\.119'; then
+            echo 'Production NetBird marker found in deployable staging value.' >&2
+            exit 1
+          fi
