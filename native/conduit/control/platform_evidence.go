@@ -11,9 +11,11 @@ import (
 const PlatformAcceptanceEvidenceSchemaV1 = "goreecloud-conduit-platform-acceptance-evidence/v1"
 
 const (
+	PlatformManager          = "goreecloud-manager"
 	PlatformPrivacyShield    = "privacy-shield"
 	PlatformWardveilSecurity = "wardveil-security"
 	PlatformEverkeep         = "everkeep"
+	PlatformGlazeUI          = "glaze-ui"
 	PlatformMesh             = "goreecloud-mesh"
 	PlatformIdentity         = "goreecloud-identity"
 	PlatformGovernance       = "goreecloud-governance"
@@ -34,15 +36,17 @@ type PlatformAcceptanceRecord struct {
 // no peers, routes, policies, credentials, device identifiers, packet data,
 // DNS queries, user information, or unrestricted diagnostics.
 type PlatformAcceptanceEvidence struct {
-	Schema                       string                   `json:"schema"`
-	SourceRevision               string                   `json:"source_revision"`
-	PrivacyShield                PlatformAcceptanceRecord `json:"privacy_shield"`
-	WardveilSecurity             PlatformAcceptanceRecord `json:"wardveil_security"`
-	Everkeep                     PlatformAcceptanceRecord `json:"everkeep"`
-	Mesh                         PlatformAcceptanceRecord `json:"mesh"`
-	Identity                     PlatformAcceptanceRecord `json:"identity"`
-	Governance                   PlatformAcceptanceRecord `json:"governance"`
-	ProductionCutoverAuthorized  bool                     `json:"production_cutover_authorized"`
+	Schema                      string                   `json:"schema"`
+	SourceRevision              string                   `json:"source_revision"`
+	Manager                     PlatformAcceptanceRecord `json:"manager"`
+	PrivacyShield               PlatformAcceptanceRecord `json:"privacy_shield"`
+	WardveilSecurity            PlatformAcceptanceRecord `json:"wardveil_security"`
+	Everkeep                    PlatformAcceptanceRecord `json:"everkeep"`
+	GlazeUI                     PlatformAcceptanceRecord `json:"glaze_ui"`
+	Mesh                        PlatformAcceptanceRecord `json:"mesh"`
+	Identity                    PlatformAcceptanceRecord `json:"identity"`
+	Governance                  PlatformAcceptanceRecord `json:"governance"`
+	ProductionCutoverAuthorized bool                     `json:"production_cutover_authorized"`
 }
 
 // ApplyPlatformAcceptanceEvidence validates a complete minimized platform
@@ -56,9 +60,11 @@ func ApplyPlatformAcceptanceEvidence(
 		return evidence, err
 	}
 
+	evidence.ManagerIntegrationValidated = true
 	evidence.PrivacyShieldValidated = true
 	evidence.WardveilSecurityValidated = true
 	evidence.EverkeepValidated = true
+	evidence.GlazeUIStableValidated = true
 	evidence.MeshCoordinationValidated = true
 	evidence.IdentityIntegrationValidated = true
 	evidence.GovernanceIntegrationValidated = true
@@ -84,9 +90,11 @@ func ValidatePlatformAcceptanceEvidence(bundle PlatformAcceptanceEvidence) error
 		expected string
 		record   PlatformAcceptanceRecord
 	}{
+		{PlatformManager, bundle.Manager},
 		{PlatformPrivacyShield, bundle.PrivacyShield},
 		{PlatformWardveilSecurity, bundle.WardveilSecurity},
 		{PlatformEverkeep, bundle.Everkeep},
+		{PlatformGlazeUI, bundle.GlazeUI},
 		{PlatformMesh, bundle.Mesh},
 		{PlatformIdentity, bundle.Identity},
 		{PlatformGovernance, bundle.Governance},
