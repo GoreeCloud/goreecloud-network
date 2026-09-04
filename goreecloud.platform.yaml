@@ -1,0 +1,126 @@
+schema_version: '0.2'
+
+component:
+  type: service
+  id: goreecloud-network
+  product_name: GoreeCloud Network
+  repository: GoreeCloud/goreecloud-network
+
+lifecycle: development
+version: unreleased-development
+
+supported_platforms:
+  - linux
+
+api:
+  versions: []
+  endpoints: []
+
+platform_systems:
+  manager:
+    result: applicable-blocked
+    version: null
+    evidence:
+      - FEATURES.md
+    notes: Manager operational visibility is applicable, but no accepted Manager integration is declared on the authoritative default branch.
+  privacy_shield:
+    result: applicable-migration-required
+    version: null
+    evidence:
+      - FEATURES.md
+    notes: Product-local privacy hardening exists, but the current default branch does not establish accepted Privacy Shield integration or production runtime evidence.
+  wardveil_security:
+    result: applicable-blocked
+    version: null
+    evidence:
+      - FEATURES.md
+    notes: Security presentation and policy boundaries exist in Development, but accepted Wardveil Security runtime integration and evidence remain incomplete.
+  everkeep:
+    result: applicable-blocked
+    version: null
+    evidence:
+      - FEATURES.md
+    notes: Network configuration, control state, migration inventory, backup, restore, rollback, and disaster-recovery acceptance under Everkeep remain incomplete.
+  glaze_ui:
+    result: applicable-migration-required
+    version: null
+    evidence:
+      - FEATURES.md
+    notes: The inherited administration experience has only an initial GoreeCloud/Glaze shell conversion; complete migration to current Stable Glaze UI 1.1.0 and acceptance remain required.
+  mesh:
+    result: applicable-blocked
+    version: null
+    evidence:
+      - FEATURES.md
+    notes: GoreeCloud Mesh coordination is applicable to cross-service network relationships, but no accepted Mesh runtime integration is declared on the default branch.
+    capabilities: []
+    dependencies: []
+    published_events: []
+    consumed_events: []
+  identity:
+    result: applicable-blocked
+    version: null
+    evidence:
+      - FEATURES.md
+    notes: GoreeCloud Identity must remain authoritative for approved human and service identity; accepted GoreeCloud Network Identity integration remains incomplete.
+
+health:
+  health_endpoint: null
+  readiness_endpoint: null
+
+continuity:
+  backup:
+    required: true
+    requirements:
+      - Protect Network control-plane configuration, policy state, required relay and management state, Conduit migration inventory, and other durable recovery state through the approved Everkeep model.
+      - Keep reusable credentials, private keys, setup keys, and unrestricted peer or route inventories out of ordinary portable evidence.
+  restore:
+    required: true
+    requirements:
+      - Validate restoration into an isolated staging environment before production qualification.
+      - Verify exact-source control state, routing and policy intent, client compatibility, migration inventory, and rollback behavior without transferring production authority.
+  export:
+    required: true
+    requirements:
+      - Provide documented, bounded export of user-controlled Network configuration and portable policy state without including reusable secrets, packet contents, or unrestricted activity data.
+  portability:
+    required: true
+    requirements:
+      - Keep GoreeCloud-owned Conduit contracts, durable configuration, and migration evidence versioned and replaceable so the target product does not remain permanently dependent on complete third-party product architecture.
+
+external_dependencies:
+  - name: WireGuard
+    purpose: Standards-based encrypted tunnel primitive retained where narrowly justified by GoreeCloud Network architecture.
+    required: true
+    version_constraint: null
+
+compatibility:
+  platform_contract: '0.2'
+  glaze_ui_required: '1.1.0'
+  requires:
+    - goreecloud-platform-contract==0.2
+  provides: []
+
+evidence:
+  acceptance_tests: []
+  release: []
+
+conformance:
+  status: nonconformant
+  validated_at: null
+  evidence:
+    - FEATURES.md
+    - BENEFITS.md
+    - COMPETITIVE-OBJECTIVES.md
+  blockers:
+    - GoreeCloud Network remains in native-by-destination Development and the authoritative default branch still carries substantial inherited NetBird product architecture as a compatibility foundation.
+    - NetBird remains production-authoritative and no production migration or capability cutover is authorized by this manifest.
+    - GoreeCloud Manager integration and acceptance are incomplete.
+    - Privacy Shield integration has application-local groundwork but accepted platform integration and target-environment evidence are incomplete.
+    - Wardveil Security integration and acceptance are incomplete.
+    - Everkeep backup, restore, rollback, and recovery acceptance are incomplete.
+    - Complete current Stable Glaze UI 1.1.0 migration and representative accessibility acceptance are incomplete.
+    - GoreeCloud Mesh integration and acceptance are incomplete.
+    - GoreeCloud Identity integration and acceptance are incomplete.
+    - Full isolated-runtime, exact-artifact recovery, restrictive-network, signed Android, approved real-device, and capability-specific production migration evidence remain incomplete.
+    - No Stable or production-approved GoreeCloud Network release evidence is declared.
