@@ -14,9 +14,11 @@ func TestApplyPlatformAcceptanceEvidenceSetsRequiredGates(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !updated.PrivacyShieldValidated ||
+	if !updated.ManagerIntegrationValidated ||
+		!updated.PrivacyShieldValidated ||
 		!updated.WardveilSecurityValidated ||
 		!updated.EverkeepValidated ||
+		!updated.GlazeUIStableValidated ||
 		!updated.MeshCoordinationValidated ||
 		!updated.IdentityIntegrationValidated ||
 		!updated.GovernanceIntegrationValidated {
@@ -26,9 +28,15 @@ func TestApplyPlatformAcceptanceEvidenceSetsRequiredGates(t *testing.T) {
 
 func TestValidatePlatformAcceptanceEvidenceRequiresEveryPlatform(t *testing.T) {
 	bundle := completePlatformAcceptanceEvidence()
-	bundle.Everkeep.Accepted = false
-	if err := ValidatePlatformAcceptanceEvidence(bundle); err == nil || !strings.Contains(err.Error(), PlatformEverkeep) {
-		t.Fatalf("Everkeep rejection error = %v", err)
+	bundle.Manager.Accepted = false
+	if err := ValidatePlatformAcceptanceEvidence(bundle); err == nil || !strings.Contains(err.Error(), PlatformManager) {
+		t.Fatalf("Manager rejection error = %v", err)
+	}
+
+	bundle = completePlatformAcceptanceEvidence()
+	bundle.GlazeUI.Accepted = false
+	if err := ValidatePlatformAcceptanceEvidence(bundle); err == nil || !strings.Contains(err.Error(), PlatformGlazeUI) {
+		t.Fatalf("Glaze UI rejection error = %v", err)
 	}
 }
 
@@ -68,12 +76,14 @@ func completePlatformAcceptanceEvidence() PlatformAcceptanceEvidence {
 	return PlatformAcceptanceEvidence{
 		Schema:         PlatformAcceptanceEvidenceSchemaV1,
 		SourceRevision: strings.Repeat("a", 40),
-		PrivacyShield:  platformAcceptanceRecord(PlatformPrivacyShield, "1"),
-		WardveilSecurity: platformAcceptanceRecord(PlatformWardveilSecurity, "2"),
-		Everkeep:       platformAcceptanceRecord(PlatformEverkeep, "3"),
-		Mesh:           platformAcceptanceRecord(PlatformMesh, "4"),
-		Identity:       platformAcceptanceRecord(PlatformIdentity, "5"),
-		Governance:     platformAcceptanceRecord(PlatformGovernance, "6"),
+		Manager:        platformAcceptanceRecord(PlatformManager, "1"),
+		PrivacyShield:  platformAcceptanceRecord(PlatformPrivacyShield, "2"),
+		WardveilSecurity: platformAcceptanceRecord(PlatformWardveilSecurity, "3"),
+		Everkeep:       platformAcceptanceRecord(PlatformEverkeep, "4"),
+		GlazeUI:        platformAcceptanceRecord(PlatformGlazeUI, "5"),
+		Mesh:           platformAcceptanceRecord(PlatformMesh, "6"),
+		Identity:       platformAcceptanceRecord(PlatformIdentity, "7"),
+		Governance:     platformAcceptanceRecord(PlatformGovernance, "8"),
 		ProductionCutoverAuthorized: false,
 	}
 }
