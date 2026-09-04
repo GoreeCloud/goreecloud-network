@@ -34,9 +34,12 @@ The planned GoreeCloud-controlled experience uses:
 
 - **Glaze UI** for GoreeCloud graphical interfaces.
 - **Wardveil Security by GoreeCloud** for security-state presentation, risk indicators, enrollment review, policy-risk visibility, and related security workflows.
+- **GoreeCloud Privacy Shield** as the shared platform privacy identity and contract authority for the explicitly declared `network-privacy` capability. GoreeCloud Network remains the networking runtime authority, and `privacy-shield/adapter.json` remains `production_approved=false` until Network-specific runtime acceptance is complete.
 - **GoreeCloud Identity** where centralized authentication or identity-provider integration is appropriate.
 - **AdGuard Home and Unbound** for their existing DNS responsibilities rather than absorbing DNS-service roles into this project.
 - **Caddy** as the separate approved HTTPS gateway for web-service publication.
+
+Privacy Shield does not turn GoreeCloud Network into a Browser blocker, DNS filtering service, firewall, identity provider, or application-authorization layer. A future Privacy Shield status producer must remain minimized and must not export raw private network activity merely for central presentation.
 
 ## Initial repository family
 
@@ -48,3 +51,5 @@ The planned GoreeCloud-controlled experience uses:
 ## Current branch purpose
 
 `agent/stable-foundation` is the initial controlled GoreeCloud development branch. The goal of this branch is to establish provenance, governance, build/CI understanding, licensing boundaries, safe product customization points, and release-readiness gates before material networking behavior is changed.
+
+The focused `agent/privacy-shield-network-adapter` branch is stacked on this stable foundation and adds Privacy Shield adapter governance only. It does not intentionally modify the inherited networking core or authorize production migration.

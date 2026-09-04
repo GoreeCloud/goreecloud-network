@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "adapter": {
+    "id": "network",
+    "product": "GoreeCloud Network",
+    "runtime_authority": "GoreeCloud/goreecloud-network",
+    "contract_version": 1
+  },
+  "capabilities": [
+    "network-privacy"
+  ],
+  "privacy": {
+    "local_first": true,
+    "raw_private_activity_exported_for_status": false,
+    "remote_tracker_learning": false,
+    "remote_tracker_telemetry": false
+  },
+  "acceptance": {
+    "runtime_acceptance_required": true,
+    "production_approved": false
+  }
+}
