@@ -21,9 +21,11 @@ type IsolatedAcceptanceEvidence struct {
 	RollbackRehearsed              bool   `json:"rollback_rehearsed"`
 	ClientNetworkingValidated      bool   `json:"client_networking_validated"`
 	SecurityPrivacyValidated       bool   `json:"security_privacy_validated"`
+	ManagerIntegrationValidated    bool   `json:"manager_integration_validated"`
 	PrivacyShieldValidated         bool   `json:"privacy_shield_validated"`
 	WardveilSecurityValidated      bool   `json:"wardveil_security_validated"`
 	EverkeepValidated              bool   `json:"everkeep_validated"`
+	GlazeUIStableValidated         bool   `json:"glaze_ui_stable_validated"`
 	MeshCoordinationValidated      bool   `json:"mesh_coordination_validated"`
 	IdentityIntegrationValidated   bool   `json:"identity_integration_validated"`
 	GovernanceIntegrationValidated bool   `json:"governance_integration_validated"`
@@ -66,9 +68,11 @@ func EvaluateIsolatedAcceptance(capability CapabilityState, evidence IsolatedAcc
 		{"rollback_rehearsed", evidence.RollbackRehearsed},
 		{"client_networking_validated", evidence.ClientNetworkingValidated},
 		{"security_privacy_validated", evidence.SecurityPrivacyValidated},
+		{"manager_integration_validated", evidence.ManagerIntegrationValidated},
 		{"privacy_shield_validated", evidence.PrivacyShieldValidated},
 		{"wardveil_security_validated", evidence.WardveilSecurityValidated},
 		{"everkeep_validated", evidence.EverkeepValidated},
+		{"glaze_ui_stable_validated", evidence.GlazeUIStableValidated},
 		{"mesh_coordination_validated", evidence.MeshCoordinationValidated},
 		{"identity_integration_validated", evidence.IdentityIntegrationValidated},
 		{"governance_integration_validated", evidence.GovernanceIntegrationValidated},
