@@ -7,6 +7,8 @@ func TestIsolatedAcceptanceFailsClosedWithMissingGates(t *testing.T) {
 	evidence := completeIsolatedEvidence()
 	evidence.RollbackRehearsed = false
 	evidence.BackupRestoreProven = false
+	evidence.ManagerIntegrationValidated = false
+	evidence.GlazeUIStableValidated = false
 	evidence.MeshCoordinationValidated = false
 	evidence.IdentityIntegrationValidated = false
 	evidence.GovernanceIntegrationValidated = false
@@ -21,6 +23,8 @@ func TestIsolatedAcceptanceFailsClosedWithMissingGates(t *testing.T) {
 	want := []string{
 		"backup_restore_proven",
 		"rollback_rehearsed",
+		"manager_integration_validated",
+		"glaze_ui_stable_validated",
 		"mesh_coordination_validated",
 		"identity_integration_validated",
 		"governance_integration_validated",
@@ -79,9 +83,11 @@ func completeIsolatedEvidence() IsolatedAcceptanceEvidence {
 		RollbackRehearsed:              true,
 		ClientNetworkingValidated:      true,
 		SecurityPrivacyValidated:       true,
+		ManagerIntegrationValidated:    true,
 		PrivacyShieldValidated:         true,
 		WardveilSecurityValidated:      true,
 		EverkeepValidated:              true,
+		GlazeUIStableValidated:         true,
 		MeshCoordinationValidated:      true,
 		IdentityIntegrationValidated:   true,
 		GovernanceIntegrationValidated: true,
