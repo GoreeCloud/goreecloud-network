@@ -45,7 +45,7 @@ go vet ./...
 node --check apps/web/app.js
 ```
 
-Android and Google TV require an Android SDK with API 37 and Gradle 9.5.0. iOS requires an Apple toolchain with SwiftUI support. Their native project sources are included in this bootstrap, but platform builds must be validated on the corresponding supported toolchains before any release claim.
+Android and Google TV require an Android SDK with API 36 and Gradle 9.5.0. iOS requires an Apple toolchain with SwiftUI support. Their native project sources are included in this bootstrap, but platform builds must be validated on the corresponding supported toolchains before any release claim.
 
 ## Repository controls
 

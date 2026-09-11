@@ -13,7 +13,7 @@ public actor NetworkAPI {
     }
 
     public func status() async throws -> NetworkStatus {
-        let url = baseURL.appending(path: "api/v1/status")
+        let url = baseURL.appendingPathComponent("api/v1/status")
         var request = URLRequest(url: url)
         request.setValue("application/json", forHTTPHeaderField: "Accept")
         request.timeoutInterval = 5

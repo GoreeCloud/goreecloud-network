@@ -5,12 +5,12 @@ plugins {
 
 android {
     namespace = "com.goreecloud.network.tv"
-    compileSdk = 37
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.goreecloud.network.tv"
         minSdk = 26
-        targetSdk = 37
+        targetSdk = 36
         versionCode = 1
         versionName = "0.1.0-dev.1"
     }
