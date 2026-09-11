@@ -42,6 +42,7 @@ type checksumPayload struct {
 	Format        string                `json:"format"`
 	SchemaVersion int                   `json:"schemaVersion"`
 	Revision      uint64                `json:"revision"`
+	WrittenAt     string                `json:"writtenAt"`
 	Migrations    []MigrationRecord     `json:"migrations"`
 	State         controlplane.Snapshot `json:"state"`
 }
@@ -222,6 +223,7 @@ func checksumFor(env envelope) (string, error) {
 		Format:        env.Format,
 		SchemaVersion: env.SchemaVersion,
 		Revision:      env.Revision,
+		WrittenAt:     env.WrittenAt,
 		Migrations:    env.Migrations,
 		State:         env.State,
 	}
