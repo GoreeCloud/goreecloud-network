@@ -3,9 +3,17 @@ import Testing
 @testable import GoreeCloudNetworkCore
 
 @Test func decodesDevelopmentStatus() throws {
-    let data = #"{"product":"GoreeCloud Network","version":"0.1.0-dev.1","lifecycle":"Development","surfaces":{"server":"bootstrap","webDashboard":"bootstrap","android":"source_bootstrap","googleTv":"source_bootstrap","ios":"source_bootstrap"}}"#.data(using: .utf8)!
+    let data = #"{"product":"GoreeCloud Network","version":"0.1.0-dev.2","lifecycle":"Development","surfaces":{"server":"development_control_plane","webDashboard":"development_dashboard","android":"development_client","googleTv":"development_client","ios":"development_client"}}"#.data(using: .utf8)!
     let status = try JSONDecoder().decode(NetworkStatus.self, from: data)
     #expect(status.product == "GoreeCloud Network")
     #expect(status.lifecycle == "Development")
-    #expect(status.surfaces.ios == "source_bootstrap")
+    #expect(status.surfaces.ios == "development_client")
+}
+
+@Test func decodesTruthfulOverview() throws {
+    let data = #"{"deviceCount":0,"resourceCount":0,"policyCount":0,"policyMode":"deny_by_default","persistence":"volatile_development_memory","authentication":"not_implemented"}"#.data(using: .utf8)!
+    let overview = try JSONDecoder().decode(NetworkOverview.self, from: data)
+    #expect(overview.deviceCount == 0)
+    #expect(overview.policyMode == "deny_by_default")
+    #expect(overview.authentication == "not_implemented")
 }

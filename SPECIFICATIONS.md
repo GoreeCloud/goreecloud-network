@@ -14,16 +14,31 @@ GoreeCloud Network is a native GoreeCloud product. Product-defining control-plan
 
 The five surfaces share the same API versioning, lifecycle vocabulary, capability state, and authority boundaries.
 
-## Initial API contract
+## Current Development API contract
 
-The Development bootstrap exposes read-only discovery endpoints:
+The `v1` Development API exposes:
 
 - `/healthz` — process liveness only.
 - `/api/v1/status` — product version, lifecycle, and surface implementation state.
+- `/api/v1/overview` — truthful control-plane counts plus persistence/authentication/policy-mode labels.
+- `/api/v1/devices` — read-only Development device inventory.
+- `/api/v1/access/evaluate` — deterministic decision-only access evaluation; deny by default unless an explicit current allow rule matches.
 - `/api/v1/platform-systems` — truthful integration state for all seven Integral Platform Systems.
 - `/api/v1/capabilities` — capability availability without implying implementation that does not exist.
 
-No endpoint in this bootstrap grants tunnel access, enrolls a device, changes policy, provisions routes, or creates a security/privacy claim.
+The current state store is `volatile_development_memory`. Authentication is `not_implemented`. The access evaluator returns a decision and reason only; it does not enforce packet flow or establish connectivity.
+
+No current endpoint enrolls a device, issues keys, administers durable policy, provisions routes, establishes a tunnel, selects a relay, enables obfuscation, or creates a security/privacy claim.
+
+## Access-decision contract
+
+The Development evaluator is deliberately fail-closed:
+
+1. Missing principal/resource context returns deny with `INVALID_CONTEXT`.
+2. An explicit matching allow policy returns allow with `MATCHING_ALLOW_POLICY`.
+3. Every other request returns deny with `NO_MATCHING_ALLOW_POLICY`.
+
+This is an early native policy primitive, not production Zero Trust enforcement. Durable revision state, authenticated administration, identity context, posture, runtime adapters, audit evidence, and packet-path enforcement remain required before a production claim.
 
 ## Authority boundaries
 
@@ -39,4 +54,4 @@ GoreeCloud Network remains responsible for Network policy enforcement, private c
 
 ## Development status
 
-This repository is Development. Native client shells and server discovery contracts do not prove tunnel, policy, relay, routing, enrollment, obfuscation, or Platform System implementation.
+This repository is Development. The implemented control-plane kernel, inventory, decision evaluator, clients, dashboard, and CI do not prove tunnel, routing, relay, enrollment, obfuscation, production policy enforcement, durable persistence, or Platform System conformance.

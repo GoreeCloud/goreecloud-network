@@ -2,16 +2,25 @@ schema: goreecloud.platform/v1
 product:
   name: GoreeCloud Network
   repository: GoreeCloud/goreecloud-network
-  version: 0.1.0-dev.1
+  version: 0.1.0-dev.2
   lifecycle: Development
   development_model: native
   production_ready: false
 surfaces:
-  server: bootstrap
-  web_dashboard: bootstrap
-  android: source_bootstrap
-  google_tv: source_bootstrap
-  ios: source_bootstrap
+  server: development_control_plane
+  web_dashboard: development_dashboard
+  android: development_client
+  google_tv: development_client
+  ios: development_client
+capabilities:
+  device_inventory: implemented_read_only_volatile
+  access_policy_evaluation: implemented_decision_only_deny_by_default
+  access_policy_management: not_implemented
+  enrollment: not_implemented
+  tunnel: not_implemented
+  routing: not_implemented
+  relay: not_implemented
+  obfuscation: not_implemented
 platform_systems:
   goreecloud_manager:
     state: planned
@@ -39,8 +48,12 @@ health:
 api:
   version: v1
   base_path: /api/v1
+state:
+  persistence: volatile_development_memory
+  authentication: not_implemented
+  policy_mode: deny_by_default
 recovery:
   state: planned
 conformance:
   stable_eligible: false
-  reason: Development bootstrap; mandatory runtime integrations and acceptance evidence are incomplete.
+  reason: Development control-plane foundation; production persistence, authenticated administration, networking runtime, Platform System integrations, and acceptance evidence remain incomplete.

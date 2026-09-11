@@ -12,8 +12,22 @@ public actor NetworkAPI {
         self.session = session
     }
 
+    public func snapshot() async throws -> NetworkSnapshot {
+        async let status = status()
+        async let overview = overview()
+        return try await NetworkSnapshot(status: status, overview: overview)
+    }
+
     public func status() async throws -> NetworkStatus {
-        let url = baseURL.appendingPathComponent("api/v1/status")
+        try await get(path: "api/v1/status", as: NetworkStatus.self)
+    }
+
+    public func overview() async throws -> NetworkOverview {
+        try await get(path: "api/v1/overview", as: NetworkOverview.self)
+    }
+
+    private func get<T: Decodable & Sendable>(path: String, as type: T.Type) async throws -> T {
+        let url = baseURL.appendingPathComponent(path)
         var request = URLRequest(url: url)
         request.setValue("application/json", forHTTPHeaderField: "Accept")
         request.timeoutInterval = 5
@@ -21,6 +35,6 @@ public actor NetworkAPI {
         guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
             throw URLError(.badServerResponse)
         }
-        return try JSONDecoder().decode(NetworkStatus.self, from: data)
+        return try JSONDecoder().decode(type, from: data)
     }
 }

@@ -14,3 +14,17 @@ public struct NetworkStatus: Codable, Equatable, Sendable {
     public let lifecycle: String
     public let surfaces: NetworkSurfaceStatus
 }
+
+public struct NetworkOverview: Codable, Equatable, Sendable {
+    public let deviceCount: Int
+    public let resourceCount: Int
+    public let policyCount: Int
+    public let policyMode: String
+    public let persistence: String
+    public let authentication: String
+}
+
+public struct NetworkSnapshot: Equatable, Sendable {
+    public let status: NetworkStatus
+    public let overview: NetworkOverview
+}
