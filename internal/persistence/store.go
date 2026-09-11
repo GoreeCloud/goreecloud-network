@@ -19,7 +19,7 @@ import (
 const (
 	fileFormat           = "goreecloud.network.controlplane"
 	CurrentSchemaVersion = 1
-	maxStateFileBytes     = 8 << 20
+	maxStateFileBytes    = 8 << 20
 )
 
 type MigrationRecord struct {
