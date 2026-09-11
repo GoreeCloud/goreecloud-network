@@ -1,4 +1,4 @@
-name: Native Bootstrap CI
+name: Native Network CI
 
 on:
   push:
@@ -29,11 +29,20 @@ jobs:
         run: node --check apps/web/app.js
       - name: Validate platform contract anchors
         run: |
+          grep -q 'version: 0.1.0-dev.2' goreecloud.platform.yaml
           grep -q 'lifecycle: Development' goreecloud.platform.yaml
+          grep -q 'production_ready: false' goreecloud.platform.yaml
           grep -q 'stable_eligible: false' goreecloud.platform.yaml
-          grep -q 'android: source_bootstrap' goreecloud.platform.yaml
-          grep -q 'google_tv: source_bootstrap' goreecloud.platform.yaml
-          grep -q 'ios: source_bootstrap' goreecloud.platform.yaml
+          grep -q 'server: development_control_plane' goreecloud.platform.yaml
+          grep -q 'web_dashboard: development_dashboard' goreecloud.platform.yaml
+          grep -q 'android: development_client' goreecloud.platform.yaml
+          grep -q 'google_tv: development_client' goreecloud.platform.yaml
+          grep -q 'ios: development_client' goreecloud.platform.yaml
+          grep -q 'persistence: volatile_development_memory' goreecloud.platform.yaml
+          grep -q 'authentication: not_implemented' goreecloud.platform.yaml
+          grep -q 'policy_mode: deny_by_default' goreecloud.platform.yaml
+          grep -q 'access_policy_evaluation: implemented_decision_only_deny_by_default' goreecloud.platform.yaml
+          grep -q 'tunnel: not_implemented' goreecloud.platform.yaml
 
   ios-core:
     runs-on: macos-latest
