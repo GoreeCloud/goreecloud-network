@@ -1,0 +1,9 @@
+GoreeCloud Network
+
+SPDX-License-Identifier: GPL-3.0-only
+
+This repository is intended to be distributed under the GNU General Public License, version 3 only (GPL-3.0-only), consistent with GoreeCloud's open-source software requirement and current native-repository precedent.
+
+The complete GPL version 3 license text is published by the Free Software Foundation at https://www.gnu.org/licenses/gpl-3.0.txt.
+
+Licensing remains subject to GoreeCloud governance and legal review before a production release.

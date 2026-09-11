@@ -1,0 +1,46 @@
+schema: goreecloud.platform/v1
+product:
+  name: GoreeCloud Network
+  repository: GoreeCloud/goreecloud-network
+  version: 0.1.0-dev.1
+  lifecycle: Development
+  development_model: native
+  production_ready: false
+surfaces:
+  server: bootstrap
+  web_dashboard: bootstrap
+  android: source_bootstrap
+  google_tv: source_bootstrap
+  ios: source_bootstrap
+platform_systems:
+  goreecloud_manager:
+    state: planned
+    evidence: none
+  privacy_shield:
+    state: planned
+    evidence: none
+  wardveil_security:
+    state: planned
+    evidence: none
+  everkeep:
+    state: planned
+    evidence: none
+  glaze_ui:
+    state: planned
+    evidence: none
+  goreecloud_mesh:
+    state: planned
+    evidence: none
+  goreecloud_identity:
+    state: planned
+    evidence: none
+health:
+  endpoint: /healthz
+api:
+  version: v1
+  base_path: /api/v1
+recovery:
+  state: planned
+conformance:
+  stable_eligible: false
+  reason: Development bootstrap; mandatory runtime integrations and acceptance evidence are incomplete.
