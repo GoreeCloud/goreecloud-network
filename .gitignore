@@ -1,0 +1,35 @@
+# Secrets and local configuration
+.env
+.env.*
+!.env.example
+
+# Go
+/bin/
+/coverage.out
+
+# Web
+node_modules/
+dist/
+
+# Android/Gradle
+.gradle/
+**/build/
+local.properties
+*.jks
+*.keystore
+
+# Apple/Xcode
+DerivedData/
+.build/
+*.xcuserstate
+xcuserdata/
+
+# Editors/OS
+.idea/
+.vscode/
+.DS_Store
+*.swp
+
+# Logs/temp
+*.log
+/tmp/

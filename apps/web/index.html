@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>GoreeCloud Network — Development Dashboard</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+  <header class="topbar"><div><p class="eyebrow">GoreeCloud Network</p><h1>Network Dashboard</h1></div><span id="lifecycle" class="status-pill" aria-live="polite">Loading</span></header>
+  <main id="main" class="shell">
+    <section class="notice" aria-labelledby="development-heading"><h2 id="development-heading">Development build</h2><p>This dashboard reports live source/runtime state. It does not imply that private networking, security protection, enrollment, routing, relay, or obfuscation is active.</p></section>
+    <section aria-labelledby="server-heading"><div class="section-heading"><h2 id="server-heading">Server</h2><button id="refresh" type="button">Refresh</button></div><div class="card-grid"><article class="card"><h3>Product</h3><p id="product">—</p></article><article class="card"><h3>Version</h3><p id="version">—</p></article><article class="card"><h3>Lifecycle</h3><p id="server-lifecycle">—</p></article></div></section>
+    <section aria-labelledby="surfaces-heading"><h2 id="surfaces-heading">Product surfaces</h2><div id="surfaces" class="card-grid" aria-live="polite"></div></section>
+    <section aria-labelledby="platform-heading"><h2 id="platform-heading">Integral Platform Systems</h2><div id="platform-systems" class="card-grid" aria-live="polite"></div></section>
+    <section aria-labelledby="capabilities-heading"><h2 id="capabilities-heading">Capabilities</h2><div id="capabilities" class="capability-list" aria-live="polite"></div></section>
+    <p id="error" class="error" role="alert" hidden></p>
+  </main>
+  <script src="/app.js" defer></script>
+</body>
+</html>
