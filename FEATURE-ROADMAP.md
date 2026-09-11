@@ -3,8 +3,9 @@
 ## P0 — Native foundation
 
 - [x] Establish coordinated Server, Web, Android, Google TV, and iOS source surfaces.
-- [x] Establish versioned read-only API discovery contract.
+- [x] Establish versioned API discovery contract.
 - [x] Establish truthful Platform System status reporting.
+- [x] Establish native volatile control-plane state and truthful overview reporting.
 - [ ] Add persistent revision/configuration store with migration framework.
 - [ ] Add GoreeCloud Identity authenticated administrative sessions.
 - [ ] Add Privacy Shield authorization context to data-affecting operations.
@@ -16,9 +17,9 @@
 
 ## P1 — Native network control
 
-- [ ] Device model and enrollment workflow.
-- [ ] Groups, resources, and revisioned access policies.
-- [ ] Deterministic policy decision evidence.
+- [~] Device model exists as a Development control-plane primitive; enrollment workflow remains unimplemented.
+- [~] Deterministic deny-by-default access evaluation exists; durable groups/resources/revisioned policy administration remains unimplemented.
+- [~] Decision reason codes exist for the current Development evaluator; complete production decision evidence remains unimplemented.
 - [ ] WireGuard lifecycle boundary.
 - [ ] Signal/path coordination.
 - [ ] Relay inventory and selection.
@@ -35,12 +36,14 @@
 
 ## P3 — Production qualification
 
-- [ ] Exact-revision CI across server, web, Android, Google TV, and iOS.
+- [~] Exact-revision CI covers server/web, portable iOS core, Android, and Google TV Development builds; full Apple application/release validation remains required.
 - [ ] Network-lab integration and failure-injection tests.
 - [ ] Migration/rollback tests.
 - [ ] Security/privacy/recovery validation.
 - [ ] Accessibility validation.
 - [ ] Release provenance/signing evidence.
 - [ ] Stable qualification review.
+
+`[~]` denotes a partially implemented Development milestone that is not complete for production/release qualification.
 
 This file records repository-local implementation progress. It must be reconciled with the canonical GoreeCloud feature-roadmap record before release qualification.

@@ -8,12 +8,12 @@ struct ContentView: View {
     var body: some View {
         NavigationStack {
             List {
-                Section("Development status") {
+                Section("Development control plane") {
                     Text(statusText)
-                    Button("Check local development server") { Task { await loadStatus() } }
+                    Button("Refresh Network state") { Task { await loadStatus() } }
                 }
-                Section("Not yet implemented") {
-                    Text("Enrollment, VPN tunneling, routing, relay, access-policy enforcement, posture, and obfuscation remain unavailable until verified source and runtime implementation exists.")
+                Section("Current boundary") {
+                    Text("The iOS client can inspect verified Development control-plane inventory and deny-by-default policy state. Enrollment, VPN tunneling, routing, relay, durable policy administration, posture enforcement, and obfuscation remain unavailable.")
                 }
             }
             .navigationTitle("GoreeCloud Network")
@@ -24,8 +24,16 @@ struct ContentView: View {
     private func loadStatus() async {
         guard let url = URL(string: "http://127.0.0.1:8080/") else { return }
         do {
-            let status = try await NetworkAPI(baseURL: url).status()
-            statusText = "\(status.product) \(status.version)\nLifecycle: \(status.lifecycle)\nServer: \(status.surfaces.server)"
+            let snapshot = try await NetworkAPI(baseURL: url).snapshot()
+            statusText = "\(snapshot.status.product) \(snapshot.status.version)\n" +
+                "Lifecycle: \(snapshot.status.lifecycle)\n" +
+                "Server: \(snapshot.status.surfaces.server)\n" +
+                "Devices: \(snapshot.overview.deviceCount)\n" +
+                "Resources: \(snapshot.overview.resourceCount)\n" +
+                "Policies: \(snapshot.overview.policyCount)\n" +
+                "Policy mode: \(snapshot.overview.policyMode)\n" +
+                "Persistence: \(snapshot.overview.persistence)\n" +
+                "Authentication: \(snapshot.overview.authentication)"
         } catch {
             statusText = "Server unavailable: \(error.localizedDescription)\nNo connection state is being claimed."
         }

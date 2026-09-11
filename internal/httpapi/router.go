@@ -2,13 +2,17 @@ package httpapi
 
 import (
 	"encoding/json"
+	"fmt"
+	"io"
 	"net/http"
 	"os"
 	"path/filepath"
+
+	"github.com/GoreeCloud/goreecloud-network/internal/controlplane"
 )
 
 const (
-	Version   = "0.1.0-dev.1"
+	Version   = "0.1.0-dev.2"
 	Lifecycle = "Development"
 )
 
@@ -39,7 +43,16 @@ type Capability struct {
 	Detail string `json:"detail"`
 }
 
+type AccessEvaluationResponse struct {
+	controlplane.AccessDecision
+	Enforcement string `json:"enforcement"`
+}
+
 func NewRouter(webRoot string) http.Handler {
+	return NewRouterWithState(webRoot, controlplane.NewState())
+}
+
+func NewRouterWithState(webRoot string, state *controlplane.State) http.Handler {
 	mux := http.NewServeMux()
 
 	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, r *http.Request) {
@@ -52,12 +65,35 @@ func NewRouter(webRoot string) http.Handler {
 			Version:   Version,
 			Lifecycle: Lifecycle,
 			Surfaces: SurfaceStatus{
-				Server:   "bootstrap",
-				Web:      "bootstrap",
-				Android:  "source_bootstrap",
-				GoogleTV: "source_bootstrap",
-				IOS:      "source_bootstrap",
+				Server:   "development_control_plane",
+				Web:      "development_dashboard",
+				Android:  "development_client",
+				GoogleTV: "development_client",
+				IOS:      "development_client",
 			},
+		})
+	})
+
+	mux.HandleFunc("GET /api/v1/overview", func(w http.ResponseWriter, r *http.Request) {
+		writeJSON(w, http.StatusOK, state.Overview())
+	})
+
+	mux.HandleFunc("GET /api/v1/devices", func(w http.ResponseWriter, r *http.Request) {
+		writeJSON(w, http.StatusOK, state.Devices())
+	})
+
+	mux.HandleFunc("POST /api/v1/access/evaluate", func(w http.ResponseWriter, r *http.Request) {
+		var request controlplane.AccessRequest
+		if err := decodeJSON(w, r, &request); err != nil {
+			writeJSON(w, http.StatusBadRequest, map[string]string{
+				"error":  "invalid_request",
+				"detail": err.Error(),
+			})
+			return
+		}
+		writeJSON(w, http.StatusOK, AccessEvaluationResponse{
+			AccessDecision: state.EvaluateAccess(request),
+			Enforcement:    "decision_only",
 		})
 	})
 
@@ -77,11 +113,13 @@ func NewRouter(webRoot string) http.Handler {
 	mux.HandleFunc("GET /api/v1/capabilities", func(w http.ResponseWriter, r *http.Request) {
 		capabilities := []Capability{
 			{ID: "status.discovery", State: "implemented", Detail: "Read-only Development status API."},
-			{ID: "web.dashboard", State: "bootstrap", Detail: "Live Development dashboard consuming the status API."},
-			{ID: "device.enrollment", State: "not_implemented", Detail: "No enrollment or key issuance exists in this bootstrap."},
-			{ID: "tunnel.wireguard", State: "not_implemented", Detail: "No tunnel lifecycle exists in this bootstrap."},
-			{ID: "access.policy", State: "not_implemented", Detail: "No network authorization decision engine exists in this bootstrap."},
-			{ID: "routing.private", State: "not_implemented", Detail: "No route advertisement or forwarding controller exists in this bootstrap."},
+			{ID: "controlplane.overview", State: "implemented", Detail: "Read-only Development inventory and authority-state summary."},
+			{ID: "device.inventory", State: "implemented", Detail: "Read-only in-memory Development device inventory. It starts empty and is not durable."},
+			{ID: "access.policy.evaluation", State: "implemented", Detail: "In-memory decision kernel supports explicit allow rules and deny-by-default. It does not yet enforce network traffic."},
+			{ID: "access.policy.management", State: "not_implemented", Detail: "No authenticated policy administration API or durable policy store exists yet."},
+			{ID: "device.enrollment", State: "not_implemented", Detail: "No enrollment credential or device-key issuance exists yet."},
+			{ID: "tunnel.wireguard", State: "not_implemented", Detail: "No tunnel lifecycle exists yet."},
+			{ID: "routing.private", State: "not_implemented", Detail: "No route advertisement or forwarding controller exists yet."},
 			{ID: "relay", State: "not_implemented", Detail: "No relay transport is active."},
 			{ID: "obfuscation", State: "not_implemented", Detail: "No obfuscation transport is active."},
 		}
@@ -101,6 +139,24 @@ func NewRouter(webRoot string) http.Handler {
 	}
 
 	return securityHeaders(mux)
+}
+
+func decodeJSON(w http.ResponseWriter, r *http.Request, value any) error {
+	r.Body = http.MaxBytesReader(w, r.Body, 64*1024)
+	decoder := json.NewDecoder(r.Body)
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(value); err != nil {
+		return err
+	}
+	var extra any
+	err := decoder.Decode(&extra)
+	if err == nil {
+		return fmt.Errorf("request body must contain exactly one JSON value")
+	}
+	if err != io.EOF {
+		return fmt.Errorf("invalid trailing JSON data: %w", err)
+	}
+	return nil
 }
 
 func writeJSON(w http.ResponseWriter, status int, value any) {
