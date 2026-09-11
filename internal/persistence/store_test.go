@@ -96,6 +96,35 @@ func TestOpenRejectsChecksumMismatch(t *testing.T) {
 	}
 }
 
+func TestOpenRejectsPersistedTimestampTampering(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "network-state.json")
+	_, _, _, err := Open(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	encoded, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var env envelope
+	if err := json.Unmarshal(encoded, &env); err != nil {
+		t.Fatal(err)
+	}
+	env.WrittenAt = "2000-01-01T00:00:00Z"
+	encoded, err = json.Marshal(env)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(path, encoded, 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	if _, _, _, err := Open(path); err == nil {
+		t.Fatal("expected timestamp tampering to fail checksum verification")
+	}
+}
+
 func TestSaveIsDeterministicForMapBackedState(t *testing.T) {
 	state := controlplane.NewState()
 	for _, device := range []controlplane.Device{
