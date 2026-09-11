@@ -31,7 +31,7 @@ class MainActivity : Activity() {
             setOnClickListener { loadStatus() }
         })
         root.addView(TextView(this).apply {
-            text = "The client can inspect the native Development control-plane inventory and policy mode. Enrollment, VPN tunneling, routing, relay, durable policy administration, and obfuscation are not yet implemented."
+            text = "The client can inspect the Development control plane and its persisted revision metadata. Enrollment, authenticated administration, VPN tunneling, routing, relay, and obfuscation are not yet implemented."
             setPadding(0, 48, 0, 0)
         })
         setContentView(root)
@@ -52,6 +52,10 @@ class MainActivity : Activity() {
                             "Policies: ${it.overview.policyCount}\n" +
                             "Policy mode: ${it.overview.policyMode}\n" +
                             "Persistence: ${it.overview.persistence}\n" +
+                            "Schema: ${it.overview.schemaVersion}\n" +
+                            "Revision: ${it.overview.revision}\n" +
+                            "Migrations: ${it.overview.migrationCount}\n" +
+                            "Integrity: ${it.overview.integrity}\n" +
                             "Authentication: ${it.overview.authentication}"
                     },
                     onFailure = { "Server unavailable: ${it.message ?: "unknown error"}\nNo connection state is being claimed." },

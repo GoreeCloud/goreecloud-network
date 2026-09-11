@@ -12,7 +12,7 @@ import (
 )
 
 const (
-	Version   = "0.1.0-dev.2"
+	Version   = "0.1.0-dev.3"
 	Lifecycle = "Development"
 )
 
@@ -49,10 +49,14 @@ type AccessEvaluationResponse struct {
 }
 
 func NewRouter(webRoot string) http.Handler {
-	return NewRouterWithState(webRoot, controlplane.NewState())
+	return NewRouterWithRuntime(webRoot, controlplane.NewState(), controlplane.VolatileStorageStatus())
 }
 
 func NewRouterWithState(webRoot string, state *controlplane.State) http.Handler {
+	return NewRouterWithRuntime(webRoot, state, controlplane.VolatileStorageStatus())
+}
+
+func NewRouterWithRuntime(webRoot string, state *controlplane.State, storage controlplane.StorageStatus) http.Handler {
 	mux := http.NewServeMux()
 
 	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, r *http.Request) {
@@ -65,7 +69,7 @@ func NewRouterWithState(webRoot string, state *controlplane.State) http.Handler 
 			Version:   Version,
 			Lifecycle: Lifecycle,
 			Surfaces: SurfaceStatus{
-				Server:   "development_control_plane",
+				Server:   "development_persistent_control_plane",
 				Web:      "development_dashboard",
 				Android:  "development_client",
 				GoogleTV: "development_client",
@@ -75,7 +79,11 @@ func NewRouterWithState(webRoot string, state *controlplane.State) http.Handler 
 	})
 
 	mux.HandleFunc("GET /api/v1/overview", func(w http.ResponseWriter, r *http.Request) {
-		writeJSON(w, http.StatusOK, state.Overview())
+		writeJSON(w, http.StatusOK, state.Overview(storage))
+	})
+
+	mux.HandleFunc("GET /api/v1/storage", func(w http.ResponseWriter, r *http.Request) {
+		writeJSON(w, http.StatusOK, storage)
 	})
 
 	mux.HandleFunc("GET /api/v1/devices", func(w http.ResponseWriter, r *http.Request) {
@@ -111,12 +119,25 @@ func NewRouterWithState(webRoot string, state *controlplane.State) http.Handler 
 	})
 
 	mux.HandleFunc("GET /api/v1/capabilities", func(w http.ResponseWriter, r *http.Request) {
+		persistenceState := "implemented_test_only"
+		persistenceDetail := "Injected router state is volatile and intended only for tests or bounded Development use."
+		inventoryState := "implemented_volatile"
+		inventoryDetail := "Read-only Development device inventory is using volatile injected state."
+		if storage.Persistence == "development_file_store" {
+			persistenceState = "implemented_development"
+			persistenceDetail = "Development server uses a revisioned JSON file store with schema versioning, migration ledger, SHA-256 integrity verification, and atomic replacement. It remains single-process and is not production storage."
+			inventoryState = "implemented_persistent_development"
+			inventoryDetail = "Read-only Development device inventory is restored from the revisioned Development file store."
+		}
+
 		capabilities := []Capability{
 			{ID: "status.discovery", State: "implemented", Detail: "Read-only Development status API."},
 			{ID: "controlplane.overview", State: "implemented", Detail: "Read-only Development inventory and authority-state summary."},
-			{ID: "device.inventory", State: "implemented", Detail: "Read-only in-memory Development device inventory. It starts empty and is not durable."},
-			{ID: "access.policy.evaluation", State: "implemented", Detail: "In-memory decision kernel supports explicit allow rules and deny-by-default. It does not yet enforce network traffic."},
-			{ID: "access.policy.management", State: "not_implemented", Detail: "No authenticated policy administration API or durable policy store exists yet."},
+			{ID: "controlplane.persistence", State: persistenceState, Detail: persistenceDetail},
+			{ID: "controlplane.migrations", State: persistenceState, Detail: "Schema version and migration ledger exist for the Development file store; production database migration and rollback evidence do not yet exist."},
+			{ID: "device.inventory", State: inventoryState, Detail: inventoryDetail},
+			{ID: "access.policy.evaluation", State: "implemented_decision_only", Detail: "Decision kernel supports explicit allow rules and deny-by-default against the loaded control-plane snapshot. It does not enforce network traffic."},
+			{ID: "access.policy.management", State: "not_implemented", Detail: "No authenticated policy administration API exists. The persistence package is not exposed as an unauthenticated mutation surface."},
 			{ID: "device.enrollment", State: "not_implemented", Detail: "No enrollment credential or device-key issuance exists yet."},
 			{ID: "tunnel.wireguard", State: "not_implemented", Detail: "No tunnel lifecycle exists yet."},
 			{ID: "routing.private", State: "not_implemented", Detail: "No route advertisement or forwarding controller exists yet."},

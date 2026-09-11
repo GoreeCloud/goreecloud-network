@@ -33,3 +33,6 @@ xcuserdata/
 # Logs/temp
 *.log
 /tmp/
+
+# GoreeCloud Network local Development state
+/var/

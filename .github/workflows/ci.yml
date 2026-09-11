@@ -21,7 +21,7 @@ jobs:
           node-version: '22'
       - name: Verify Go formatting
         run: test -z "$(gofmt -l cmd internal)"
-      - name: Test server
+      - name: Test server and persistence
         run: go test ./...
       - name: Vet server
         run: go vet ./...
@@ -29,16 +29,21 @@ jobs:
         run: node --check apps/web/app.js
       - name: Validate platform contract anchors
         run: |
-          grep -q 'version: 0.1.0-dev.2' goreecloud.platform.yaml
+          grep -q 'version: 0.1.0-dev.3' goreecloud.platform.yaml
           grep -q 'lifecycle: Development' goreecloud.platform.yaml
           grep -q 'production_ready: false' goreecloud.platform.yaml
           grep -q 'stable_eligible: false' goreecloud.platform.yaml
-          grep -q 'server: development_control_plane' goreecloud.platform.yaml
+          grep -q 'server: development_persistent_control_plane' goreecloud.platform.yaml
           grep -q 'web_dashboard: development_dashboard' goreecloud.platform.yaml
           grep -q 'android: development_client' goreecloud.platform.yaml
           grep -q 'google_tv: development_client' goreecloud.platform.yaml
           grep -q 'ios: development_client' goreecloud.platform.yaml
-          grep -q 'persistence: volatile_development_memory' goreecloud.platform.yaml
+          grep -q 'controlplane_persistence: implemented_development_revisioned_file_store' goreecloud.platform.yaml
+          grep -q 'controlplane_migrations: implemented_development_schema_v1_ledger' goreecloud.platform.yaml
+          grep -q 'persistence: development_file_store' goreecloud.platform.yaml
+          grep -q 'schema_version: 1' goreecloud.platform.yaml
+          grep -q 'integrity: sha256' goreecloud.platform.yaml
+          grep -q 'multi_writer: false' goreecloud.platform.yaml
           grep -q 'authentication: not_implemented' goreecloud.platform.yaml
           grep -q 'policy_mode: deny_by_default' goreecloud.platform.yaml
           grep -q 'access_policy_evaluation: implemented_decision_only_deny_by_default' goreecloud.platform.yaml

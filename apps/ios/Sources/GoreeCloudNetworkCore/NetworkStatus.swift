@@ -21,6 +21,11 @@ public struct NetworkOverview: Codable, Equatable, Sendable {
     public let policyCount: Int
     public let policyMode: String
     public let persistence: String
+    public let schemaVersion: Int
+    public let revision: UInt64
+    public let migrationCount: Int
+    public let lastPersistedAt: String?
+    public let integrity: String
     public let authentication: String
 }
 

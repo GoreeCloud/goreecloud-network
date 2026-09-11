@@ -30,7 +30,7 @@ func TestStatusEndpoint(t *testing.T) {
 	if payload.Version != Version || payload.Lifecycle != Lifecycle {
 		t.Fatalf("unexpected version/lifecycle: %+v", payload)
 	}
-	if payload.Surfaces.Server != "development_control_plane" || payload.Surfaces.Android != "development_client" || payload.Surfaces.GoogleTV != "development_client" || payload.Surfaces.IOS != "development_client" {
+	if payload.Surfaces.Server != "development_persistent_control_plane" || payload.Surfaces.Android != "development_client" || payload.Surfaces.GoogleTV != "development_client" || payload.Surfaces.IOS != "development_client" {
 		t.Fatalf("surface states must remain truthful: %+v", payload.Surfaces)
 	}
 }
@@ -45,10 +45,47 @@ func TestOverviewStartsEmptyAndTruthful(t *testing.T) {
 		t.Fatalf("decode response: %v", err)
 	}
 	if payload.DeviceCount != 0 || payload.ResourceCount != 0 || payload.PolicyCount != 0 {
-		t.Fatalf("default server must not invent inventory: %+v", payload)
+		t.Fatalf("default router must not invent inventory: %+v", payload)
 	}
-	if payload.PolicyMode != "deny_by_default" || payload.Persistence != "volatile_development_memory" || payload.Authentication != "not_implemented" {
+	if payload.PolicyMode != "deny_by_default" || payload.Persistence != "volatile_test_memory" || payload.Authentication != "not_implemented" {
 		t.Fatalf("unexpected authority state: %+v", payload)
+	}
+}
+
+func TestRuntimeOverviewReportsPersistentMetadata(t *testing.T) {
+	storage := controlplane.StorageStatus{
+		Persistence:    "development_file_store",
+		SchemaVersion:  1,
+		Revision:       9,
+		MigrationCount: 2,
+		LastPersisted:  "2026-09-11T23:00:00Z",
+		Integrity:      "sha256",
+	}
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/overview", nil)
+	rec := httptest.NewRecorder()
+	NewRouterWithRuntime("testdata/missing-web-root", controlplane.NewState(), storage).ServeHTTP(rec, req)
+
+	var payload controlplane.Overview
+	if err := json.NewDecoder(rec.Body).Decode(&payload); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if payload.Persistence != "development_file_store" || payload.SchemaVersion != 1 || payload.Revision != 9 || payload.MigrationCount != 2 || payload.Integrity != "sha256" {
+		t.Fatalf("persistent metadata was not surfaced: %+v", payload)
+	}
+}
+
+func TestStorageEndpointReportsInjectedRuntimeStorage(t *testing.T) {
+	storage := controlplane.StorageStatus{Persistence: "development_file_store", SchemaVersion: 1, Revision: 3, MigrationCount: 1, Integrity: "sha256"}
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/storage", nil)
+	rec := httptest.NewRecorder()
+	NewRouterWithRuntime("testdata/missing-web-root", controlplane.NewState(), storage).ServeHTTP(rec, req)
+
+	var payload controlplane.StorageStatus
+	if err := json.NewDecoder(rec.Body).Decode(&payload); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if payload != storage {
+		t.Fatalf("unexpected storage state: %+v", payload)
 	}
 }
 
@@ -100,20 +137,31 @@ func TestAccessEvaluationUsesExplicitAllowPolicy(t *testing.T) {
 	}
 }
 
-func TestCapabilitiesDoNotClaimTunnelImplementation(t *testing.T) {
+func TestCapabilitiesTruthfullyReportPersistentDevelopmentStore(t *testing.T) {
+	storage := controlplane.StorageStatus{Persistence: "development_file_store", SchemaVersion: 1, Revision: 1, MigrationCount: 1, Integrity: "sha256"}
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/capabilities", nil)
 	rec := httptest.NewRecorder()
-	NewRouter("testdata/missing-web-root").ServeHTTP(rec, req)
+	NewRouterWithRuntime("testdata/missing-web-root", controlplane.NewState(), storage).ServeHTTP(rec, req)
 
 	var payload []Capability
 	if err := json.NewDecoder(rec.Body).Decode(&payload); err != nil {
 		t.Fatalf("decode response: %v", err)
 	}
 
+	foundPersistence := false
 	for _, capability := range payload {
+		if capability.ID == "controlplane.persistence" {
+			foundPersistence = true
+			if capability.State != "implemented_development" {
+				t.Fatalf("unexpected persistence capability: %+v", capability)
+			}
+		}
 		if capability.ID == "tunnel.wireguard" && capability.State != "not_implemented" {
 			t.Fatalf("tunnel must not be represented as implemented: %+v", capability)
 		}
+	}
+	if !foundPersistence {
+		t.Fatal("missing persistence capability")
 	}
 }
 

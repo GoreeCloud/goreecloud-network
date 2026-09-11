@@ -2,18 +2,20 @@ schema: goreecloud.platform/v1
 product:
   name: GoreeCloud Network
   repository: GoreeCloud/goreecloud-network
-  version: 0.1.0-dev.2
+  version: 0.1.0-dev.3
   lifecycle: Development
   development_model: native
   production_ready: false
 surfaces:
-  server: development_control_plane
+  server: development_persistent_control_plane
   web_dashboard: development_dashboard
   android: development_client
   google_tv: development_client
   ios: development_client
 capabilities:
-  device_inventory: implemented_read_only_volatile
+  controlplane_persistence: implemented_development_revisioned_file_store
+  controlplane_migrations: implemented_development_schema_v1_ledger
+  device_inventory: implemented_read_only_persistent_development
   access_policy_evaluation: implemented_decision_only_deny_by_default
   access_policy_management: not_implemented
   enrollment: not_implemented
@@ -49,11 +51,16 @@ api:
   version: v1
   base_path: /api/v1
 state:
-  persistence: volatile_development_memory
+  persistence: development_file_store
+  schema_version: 1
+  integrity: sha256
+  atomic_replace: true
+  multi_writer: false
+  production_database: false
   authentication: not_implemented
   policy_mode: deny_by_default
 recovery:
   state: planned
 conformance:
   stable_eligible: false
-  reason: Development control-plane foundation; production persistence, authenticated administration, networking runtime, Platform System integrations, and acceptance evidence remain incomplete.
+  reason: Development revisioned file-store foundation exists; authenticated administration, production persistence/recovery, networking runtime, Platform System integrations, and acceptance evidence remain incomplete.
