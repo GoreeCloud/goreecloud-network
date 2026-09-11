@@ -1,6 +1,5 @@
 plugins {
     id("com.android.application")
-    id("org.jetbrains.kotlin.android")
 }
 
 android {
@@ -15,6 +14,11 @@ android {
         versionName = "0.1.0-dev.1"
     }
 
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
+    }
+
     buildTypes {
         getByName("debug") {
             manifestPlaceholders["usesCleartextTraffic"] = "true"
@@ -23,8 +27,4 @@ android {
             manifestPlaceholders["usesCleartextTraffic"] = "false"
         }
     }
-}
-
-kotlin {
-    jvmToolchain(17)
 }
