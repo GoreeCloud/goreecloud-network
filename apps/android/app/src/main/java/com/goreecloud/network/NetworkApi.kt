@@ -17,6 +17,11 @@ data class NetworkOverview(
     val policyCount: Int,
     val policyMode: String,
     val persistence: String,
+    val schemaVersion: Int,
+    val revision: Long,
+    val migrationCount: Int,
+    val lastPersistedAt: String?,
+    val integrity: String,
     val authentication: String,
 )
 
@@ -46,6 +51,11 @@ class NetworkApi(private val baseUrl: String) {
             policyCount = json.getInt("policyCount"),
             policyMode = json.getString("policyMode"),
             persistence = json.getString("persistence"),
+            schemaVersion = json.getInt("schemaVersion"),
+            revision = json.getLong("revision"),
+            migrationCount = json.getInt("migrationCount"),
+            lastPersistedAt = json.optString("lastPersistedAt").takeIf { it.isNotBlank() },
+            integrity = json.getString("integrity"),
             authentication = json.getString("authentication"),
         )
     }

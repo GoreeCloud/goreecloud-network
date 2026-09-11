@@ -13,7 +13,7 @@ struct ContentView: View {
                     Button("Refresh Network state") { Task { await loadStatus() } }
                 }
                 Section("Current boundary") {
-                    Text("The iOS client can inspect verified Development control-plane inventory and deny-by-default policy state. Enrollment, VPN tunneling, routing, relay, durable policy administration, posture enforcement, and obfuscation remain unavailable.")
+                    Text("The iOS client can inspect persisted Development control-plane revision metadata and deny-by-default decision state. Enrollment, authenticated administration, VPN tunneling, routing, relay, posture enforcement, and obfuscation remain unavailable.")
                 }
             }
             .navigationTitle("GoreeCloud Network")
@@ -33,6 +33,10 @@ struct ContentView: View {
                 "Policies: \(snapshot.overview.policyCount)\n" +
                 "Policy mode: \(snapshot.overview.policyMode)\n" +
                 "Persistence: \(snapshot.overview.persistence)\n" +
+                "Schema: \(snapshot.overview.schemaVersion)\n" +
+                "Revision: \(snapshot.overview.revision)\n" +
+                "Migrations: \(snapshot.overview.migrationCount)\n" +
+                "Integrity: \(snapshot.overview.integrity)\n" +
                 "Authentication: \(snapshot.overview.authentication)"
         } catch {
             statusText = "Server unavailable: \(error.localizedDescription)\nNo connection state is being claimed."

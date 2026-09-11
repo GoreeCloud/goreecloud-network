@@ -4,7 +4,7 @@ import "testing"
 
 func TestEmptyStateIsDenyByDefault(t *testing.T) {
 	state := NewState()
-	overview := state.Overview()
+	overview := state.Overview(VolatileStorageStatus())
 	if overview.PolicyMode != "deny_by_default" || overview.PolicyCount != 0 {
 		t.Fatalf("unexpected overview: %+v", overview)
 	}
@@ -34,5 +34,33 @@ func TestInvalidContextFailsClosed(t *testing.T) {
 	decision := state.EvaluateAccess(AccessRequest{PrincipalID: "principal-1"})
 	if decision.Decision != "deny" || decision.ReasonCode != "INVALID_CONTEXT" {
 		t.Fatalf("invalid context must fail closed: %+v", decision)
+	}
+}
+
+func TestSnapshotRoundTripPreservesState(t *testing.T) {
+	state := NewState()
+	if err := state.PutDevice(Device{ID: "device-2", Name: "Tablet", Platform: "android", State: "approved"}); err != nil {
+		t.Fatal(err)
+	}
+	if err := state.PutDevice(Device{ID: "device-1", Name: "Phone", Platform: "android", State: "approved"}); err != nil {
+		t.Fatal(err)
+	}
+	if err := state.PutResource(Resource{ID: "resource-1", Name: "NAS", Type: "host"}); err != nil {
+		t.Fatal(err)
+	}
+	if err := state.PutAllowPolicy(AllowPolicy{ID: "policy-1", PrincipalID: "principal-1", ResourceID: "resource-1"}); err != nil {
+		t.Fatal(err)
+	}
+
+	snapshot := state.Snapshot()
+	if len(snapshot.Devices) != 2 || snapshot.Devices[0].ID != "device-1" {
+		t.Fatalf("snapshot should be stable and sorted: %+v", snapshot.Devices)
+	}
+	restored, err := NewStateFromSnapshot(snapshot)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := restored.Overview(VolatileStorageStatus()); got.DeviceCount != 2 || got.ResourceCount != 1 || got.PolicyCount != 1 {
+		t.Fatalf("unexpected restored counts: %+v", got)
 	}
 }

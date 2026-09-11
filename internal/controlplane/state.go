@@ -2,6 +2,7 @@ package controlplane
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 	"sync"
 )
@@ -39,13 +40,33 @@ type AccessDecision struct {
 	PolicyID   string `json:"policyId,omitempty"`
 }
 
+type StorageStatus struct {
+	Persistence    string `json:"persistence"`
+	SchemaVersion  int    `json:"schemaVersion"`
+	Revision       uint64 `json:"revision"`
+	MigrationCount int    `json:"migrationCount"`
+	LastPersisted  string `json:"lastPersistedAt,omitempty"`
+	Integrity      string `json:"integrity"`
+}
+
 type Overview struct {
 	DeviceCount    int    `json:"deviceCount"`
 	ResourceCount  int    `json:"resourceCount"`
 	PolicyCount    int    `json:"policyCount"`
 	PolicyMode     string `json:"policyMode"`
 	Persistence    string `json:"persistence"`
+	SchemaVersion  int    `json:"schemaVersion"`
+	Revision       uint64 `json:"revision"`
+	MigrationCount int    `json:"migrationCount"`
+	LastPersisted  string `json:"lastPersistedAt,omitempty"`
+	Integrity      string `json:"integrity"`
 	Authentication string `json:"authentication"`
+}
+
+type Snapshot struct {
+	Devices       []Device      `json:"devices"`
+	Resources     []Resource    `json:"resources"`
+	AllowPolicies []AllowPolicy `json:"allowPolicies"`
 }
 
 type State struct {
@@ -63,6 +84,33 @@ func NewState() *State {
 	}
 }
 
+func NewStateFromSnapshot(snapshot Snapshot) (*State, error) {
+	state := NewState()
+	for _, device := range snapshot.Devices {
+		if err := state.PutDevice(device); err != nil {
+			return nil, fmt.Errorf("restore device %q: %w", device.ID, err)
+		}
+	}
+	for _, resource := range snapshot.Resources {
+		if err := state.PutResource(resource); err != nil {
+			return nil, fmt.Errorf("restore resource %q: %w", resource.ID, err)
+		}
+	}
+	for _, policy := range snapshot.AllowPolicies {
+		if err := state.PutAllowPolicy(policy); err != nil {
+			return nil, fmt.Errorf("restore policy %q: %w", policy.ID, err)
+		}
+	}
+	return state, nil
+}
+
+func VolatileStorageStatus() StorageStatus {
+	return StorageStatus{
+		Persistence: "volatile_test_memory",
+		Integrity:   "none",
+	}
+}
+
 func (s *State) Devices() []Device {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
@@ -71,10 +119,35 @@ func (s *State) Devices() []Device {
 	for _, device := range s.devices {
 		devices = append(devices, device)
 	}
+	sort.Slice(devices, func(i, j int) bool { return devices[i].ID < devices[j].ID })
 	return devices
 }
 
-func (s *State) Overview() Overview {
+func (s *State) Snapshot() Snapshot {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	snapshot := Snapshot{
+		Devices:       make([]Device, 0, len(s.devices)),
+		Resources:     make([]Resource, 0, len(s.resources)),
+		AllowPolicies: make([]AllowPolicy, 0, len(s.policies)),
+	}
+	for _, device := range s.devices {
+		snapshot.Devices = append(snapshot.Devices, device)
+	}
+	for _, resource := range s.resources {
+		snapshot.Resources = append(snapshot.Resources, resource)
+	}
+	for _, policy := range s.policies {
+		snapshot.AllowPolicies = append(snapshot.AllowPolicies, policy)
+	}
+	sort.Slice(snapshot.Devices, func(i, j int) bool { return snapshot.Devices[i].ID < snapshot.Devices[j].ID })
+	sort.Slice(snapshot.Resources, func(i, j int) bool { return snapshot.Resources[i].ID < snapshot.Resources[j].ID })
+	sort.Slice(snapshot.AllowPolicies, func(i, j int) bool { return snapshot.AllowPolicies[i].ID < snapshot.AllowPolicies[j].ID })
+	return snapshot
+}
+
+func (s *State) Overview(storage StorageStatus) Overview {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
@@ -83,7 +156,12 @@ func (s *State) Overview() Overview {
 		ResourceCount:  len(s.resources),
 		PolicyCount:    len(s.policies),
 		PolicyMode:     "deny_by_default",
-		Persistence:    "volatile_development_memory",
+		Persistence:    storage.Persistence,
+		SchemaVersion:  storage.SchemaVersion,
+		Revision:       storage.Revision,
+		MigrationCount: storage.MigrationCount,
+		LastPersisted:  storage.LastPersisted,
+		Integrity:      storage.Integrity,
 		Authentication: "not_implemented",
 	}
 }
@@ -146,7 +224,13 @@ func (s *State) EvaluateAccess(request AccessRequest) AccessDecision {
 
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-	for _, policy := range s.policies {
+	policyIDs := make([]string, 0, len(s.policies))
+	for policyID := range s.policies {
+		policyIDs = append(policyIDs, policyID)
+	}
+	sort.Strings(policyIDs)
+	for _, policyID := range policyIDs {
+		policy := s.policies[policyID]
 		if policy.PrincipalID != request.PrincipalID || policy.ResourceID != request.ResourceID {
 			continue
 		}

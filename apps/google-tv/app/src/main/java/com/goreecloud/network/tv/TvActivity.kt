@@ -32,7 +32,7 @@ class TvActivity : Activity() {
             setOnClickListener { loadStatus() }
         })
         root.addView(TextView(this).apply {
-            text = "This TV client currently presents verified Development control-plane state only. Remote-first connection controls will be added after enrollment and tunnel runtime implementation exists."
+            text = "This remote-first Development surface reports persisted control-plane revision state only. Connection controls will not appear until enrollment and tunnel lifecycle are verified."
             textSize = 18f
             setPadding(0, 48, 0, 0)
         })
@@ -52,7 +52,11 @@ class TvActivity : Activity() {
                             "Devices: ${it.overview.deviceCount}\n" +
                             "Resources: ${it.overview.resourceCount}\n" +
                             "Policies: ${it.overview.policyCount}\n" +
-                            "Policy mode: ${it.overview.policyMode}"
+                            "Policy: ${it.overview.policyMode}\n" +
+                            "Store: ${it.overview.persistence}\n" +
+                            "Schema: ${it.overview.schemaVersion} · revision ${it.overview.revision}\n" +
+                            "Migrations: ${it.overview.migrationCount} · integrity ${it.overview.integrity}\n" +
+                            "Authentication: ${it.overview.authentication}"
                     },
                     onFailure = { "Server unavailable: ${it.message ?: "unknown error"}\nNo connection state is being claimed." },
                 )
