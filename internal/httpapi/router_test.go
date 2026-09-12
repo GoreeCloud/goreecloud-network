@@ -2,166 +2,166 @@ package httpapi
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
 	"github.com/GoreeCloud/goreecloud-network/internal/controlplane"
+	"github.com/GoreeCloud/goreecloud-network/internal/identity"
 )
+
+type testAuthenticator struct {
+	status    identity.Status
+	principal identity.Principal
+	err       error
+}
+
+func (a testAuthenticator) Status() identity.Status { return a.status }
+func (a testAuthenticator) AuthenticateAdmin(context.Context, string) (identity.Principal, error) {
+	return a.principal, a.err
+}
 
 func TestStatusEndpoint(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/status", nil)
 	rec := httptest.NewRecorder()
-
 	NewRouter("testdata/missing-web-root").ServeHTTP(rec, req)
-
 	if rec.Code != http.StatusOK {
 		t.Fatalf("expected 200, got %d", rec.Code)
 	}
-
 	var payload StatusResponse
 	if err := json.NewDecoder(rec.Body).Decode(&payload); err != nil {
-		t.Fatalf("decode response: %v", err)
+		t.Fatal(err)
 	}
-	if payload.Product != "GoreeCloud Network" {
-		t.Fatalf("unexpected product: %q", payload.Product)
+	if payload.Product != "GoreeCloud Network" || payload.Version != Version || payload.Lifecycle != Lifecycle {
+		t.Fatalf("unexpected status: %+v", payload)
 	}
-	if payload.Version != Version || payload.Lifecycle != Lifecycle {
-		t.Fatalf("unexpected version/lifecycle: %+v", payload)
-	}
-	if payload.Surfaces.Server != "development_persistent_control_plane" || payload.Surfaces.Android != "development_client" || payload.Surfaces.GoogleTV != "development_client" || payload.Surfaces.IOS != "development_client" {
-		t.Fatalf("surface states must remain truthful: %+v", payload.Surfaces)
+	if payload.Surfaces.Server != "development_identity_aware_control_plane" {
+		t.Fatalf("unexpected server surface: %+v", payload.Surfaces)
 	}
 }
 
-func TestOverviewStartsEmptyAndTruthful(t *testing.T) {
+func TestOverviewReportsFailClosedIdentityBoundary(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/overview", nil)
 	rec := httptest.NewRecorder()
 	NewRouter("testdata/missing-web-root").ServeHTTP(rec, req)
-
 	var payload controlplane.Overview
 	if err := json.NewDecoder(rec.Body).Decode(&payload); err != nil {
-		t.Fatalf("decode response: %v", err)
+		t.Fatal(err)
 	}
-	if payload.DeviceCount != 0 || payload.ResourceCount != 0 || payload.PolicyCount != 0 {
-		t.Fatalf("default router must not invent inventory: %+v", payload)
-	}
-	if payload.PolicyMode != "deny_by_default" || payload.Persistence != "volatile_test_memory" || payload.Authentication != "not_implemented" {
+	if payload.Authentication != "identity_boundary_runtime_unconfigured" || payload.PolicyMode != "deny_by_default" {
 		t.Fatalf("unexpected authority state: %+v", payload)
 	}
 }
 
-func TestRuntimeOverviewReportsPersistentMetadata(t *testing.T) {
-	storage := controlplane.StorageStatus{
-		Persistence:    "development_file_store",
-		SchemaVersion:  1,
-		Revision:       9,
-		MigrationCount: 2,
-		LastPersisted:  "2026-09-11T23:00:00Z",
-		Integrity:      "sha256",
-	}
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/overview", nil)
-	rec := httptest.NewRecorder()
-	NewRouterWithRuntime("testdata/missing-web-root", controlplane.NewState(), storage).ServeHTTP(rec, req)
-
-	var payload controlplane.Overview
-	if err := json.NewDecoder(rec.Body).Decode(&payload); err != nil {
-		t.Fatalf("decode response: %v", err)
-	}
-	if payload.Persistence != "development_file_store" || payload.SchemaVersion != 1 || payload.Revision != 9 || payload.MigrationCount != 2 || payload.Integrity != "sha256" {
-		t.Fatalf("persistent metadata was not surfaced: %+v", payload)
-	}
-}
-
-func TestStorageEndpointReportsInjectedRuntimeStorage(t *testing.T) {
-	storage := controlplane.StorageStatus{Persistence: "development_file_store", SchemaVersion: 1, Revision: 3, MigrationCount: 1, Integrity: "sha256"}
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/storage", nil)
-	rec := httptest.NewRecorder()
-	NewRouterWithRuntime("testdata/missing-web-root", controlplane.NewState(), storage).ServeHTTP(rec, req)
-
-	var payload controlplane.StorageStatus
-	if err := json.NewDecoder(rec.Body).Decode(&payload); err != nil {
-		t.Fatalf("decode response: %v", err)
-	}
-	if payload != storage {
-		t.Fatalf("unexpected storage state: %+v", payload)
-	}
-}
-
-func TestDeviceInventoryStartsEmpty(t *testing.T) {
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/devices", nil)
+func TestAuthenticationStatusDoesNotClaimRuntimeIntegration(t *testing.T) {
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/authentication", nil)
 	rec := httptest.NewRecorder()
 	NewRouter("testdata/missing-web-root").ServeHTTP(rec, req)
-
-	var payload []controlplane.Device
+	var payload identity.Status
 	if err := json.NewDecoder(rec.Body).Decode(&payload); err != nil {
-		t.Fatalf("decode response: %v", err)
-	}
-	if len(payload) != 0 {
-		t.Fatalf("default inventory must be empty: %+v", payload)
-	}
-}
-
-func TestAccessEvaluationDeniesByDefault(t *testing.T) {
-	body := bytes.NewBufferString(`{"principalId":"principal-1","deviceId":"device-1","resourceId":"resource-1"}`)
-	req := httptest.NewRequest(http.MethodPost, "/api/v1/access/evaluate", body)
-	rec := httptest.NewRecorder()
-	NewRouter("testdata/missing-web-root").ServeHTTP(rec, req)
-
-	var payload AccessEvaluationResponse
-	if err := json.NewDecoder(rec.Body).Decode(&payload); err != nil {
-		t.Fatalf("decode response: %v", err)
-	}
-	if payload.Decision != "deny" || payload.ReasonCode != "NO_MATCHING_ALLOW_POLICY" || payload.Enforcement != "decision_only" {
-		t.Fatalf("expected decision-only deny by default, got %+v", payload)
-	}
-}
-
-func TestAccessEvaluationUsesExplicitAllowPolicy(t *testing.T) {
-	state := controlplane.NewState()
-	if err := state.PutAllowPolicy(controlplane.AllowPolicy{ID: "policy-1", PrincipalID: "principal-1", DeviceID: "device-1", ResourceID: "resource-1"}); err != nil {
 		t.Fatal(err)
 	}
-	body := bytes.NewBufferString(`{"principalId":"principal-1","deviceId":"device-1","resourceId":"resource-1"}`)
-	req := httptest.NewRequest(http.MethodPost, "/api/v1/access/evaluate", body)
-	rec := httptest.NewRecorder()
-	NewRouterWithState("testdata/missing-web-root", state).ServeHTTP(rec, req)
-
-	var payload AccessEvaluationResponse
-	if err := json.NewDecoder(rec.Body).Decode(&payload); err != nil {
-		t.Fatalf("decode response: %v", err)
-	}
-	if payload.Decision != "allow" || payload.PolicyID != "policy-1" {
-		t.Fatalf("expected explicit allow policy, got %+v", payload)
+	if payload.Authority != "goreecloud_identity" || payload.RuntimeConfigured || payload.ProductionAccepted {
+		t.Fatalf("unexpected auth status: %+v", payload)
 	}
 }
 
-func TestCapabilitiesTruthfullyReportPersistentDevelopmentStore(t *testing.T) {
-	storage := controlplane.StorageStatus{Persistence: "development_file_store", SchemaVersion: 1, Revision: 1, MigrationCount: 1, Integrity: "sha256"}
+func TestAdminSessionRequiresBearerToken(t *testing.T) {
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/admin/session", nil)
+	rec := httptest.NewRecorder()
+	NewRouter("testdata/missing-web-root").ServeHTTP(rec, req)
+	if rec.Code != http.StatusUnauthorized || rec.Header().Get("WWW-Authenticate") == "" {
+		t.Fatalf("expected bearer challenge, got %d %q", rec.Code, rec.Header().Get("WWW-Authenticate"))
+	}
+}
+
+func TestAdminSessionFailsClosedWhenIdentityRuntimeUnconfigured(t *testing.T) {
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/admin/session", nil)
+	req.Header.Set("Authorization", "Bearer token")
+	rec := httptest.NewRecorder()
+	NewRouter("testdata/missing-web-root").ServeHTTP(rec, req)
+	if rec.Code != http.StatusServiceUnavailable {
+		t.Fatalf("expected 503, got %d: %s", rec.Code, rec.Body.String())
+	}
+}
+
+func TestAdminSessionReturnsMinimalAuthorizedPrincipal(t *testing.T) {
+	auth := testAuthenticator{status: identity.Status{Authority: "goreecloud_identity", Protocol: "oauth2_token_introspection", State: "identity_introspection_configured_runtime_unaccepted", RuntimeConfigured: true, RequiredScope: DefaultAdminScope}, principal: identity.Principal{Subject: "principal-1", Username: "admin", Scopes: []string{DefaultAdminScope}}}
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/admin/session", nil)
+	req.Header.Set("Authorization", "Bearer token")
+	rec := httptest.NewRecorder()
+	NewRouterWithRuntimeAndIdentity("testdata/missing-web-root", controlplane.NewState(), controlplane.VolatileStorageStatus(), auth).ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", rec.Code, rec.Body.String())
+	}
+	var payload AdminSessionResponse
+	if err := json.NewDecoder(rec.Body).Decode(&payload); err != nil {
+		t.Fatal(err)
+	}
+	if !payload.Authenticated || !payload.Authorized || payload.Subject != "principal-1" || payload.Authority != "goreecloud_identity" {
+		t.Fatalf("unexpected session: %+v", payload)
+	}
+	if rec.Header().Get("Cache-Control") != "no-store" {
+		t.Fatalf("admin session must be no-store")
+	}
+}
+
+func TestAdminSessionRejectsInsufficientAuthority(t *testing.T) {
+	auth := testAuthenticator{status: identity.Status{Authority: "goreecloud_identity", State: "identity_introspection_configured_runtime_unaccepted", RuntimeConfigured: true, RequiredScope: DefaultAdminScope}, err: identity.ErrForbidden}
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/admin/session", nil)
+	req.Header.Set("Authorization", "Bearer token")
+	rec := httptest.NewRecorder()
+	NewRouterWithRuntimeAndIdentity("testdata/missing-web-root", controlplane.NewState(), controlplane.VolatileStorageStatus(), auth).ServeHTTP(rec, req)
+	if rec.Code != http.StatusForbidden {
+		t.Fatalf("expected 403, got %d", rec.Code)
+	}
+}
+
+func TestAdminSessionRejectsInvalidToken(t *testing.T) {
+	auth := testAuthenticator{status: identity.Status{Authority: "goreecloud_identity", State: "identity_introspection_configured_runtime_unaccepted", RuntimeConfigured: true, RequiredScope: DefaultAdminScope}, err: identity.ErrUnauthenticated}
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/admin/session", nil)
+	req.Header.Set("Authorization", "Bearer token")
+	rec := httptest.NewRecorder()
+	NewRouterWithRuntimeAndIdentity("testdata/missing-web-root", controlplane.NewState(), controlplane.VolatileStorageStatus(), auth).ServeHTTP(rec, req)
+	if rec.Code != http.StatusUnauthorized {
+		t.Fatalf("expected 401, got %d", rec.Code)
+	}
+}
+
+func TestAccessEvaluationStillDeniesByDefault(t *testing.T) {
+	body := bytes.NewBufferString(`{"principalId":"principal-1","deviceId":"device-1","resourceId":"resource-1"}`)
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/access/evaluate", body)
+	rec := httptest.NewRecorder()
+	NewRouter("testdata/missing-web-root").ServeHTTP(rec, req)
+	var payload AccessEvaluationResponse
+	if err := json.NewDecoder(rec.Body).Decode(&payload); err != nil {
+		t.Fatal(err)
+	}
+	if payload.Decision != "deny" || payload.ReasonCode != "NO_MATCHING_ALLOW_POLICY" || payload.Enforcement != "decision_only" {
+		t.Fatalf("unexpected decision: %+v", payload)
+	}
+}
+
+func TestCapabilitiesKeepMutationAndTunnelUnimplemented(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/capabilities", nil)
 	rec := httptest.NewRecorder()
-	NewRouterWithRuntime("testdata/missing-web-root", controlplane.NewState(), storage).ServeHTTP(rec, req)
-
+	NewRouter("testdata/missing-web-root").ServeHTTP(rec, req)
 	var payload []Capability
 	if err := json.NewDecoder(rec.Body).Decode(&payload); err != nil {
-		t.Fatalf("decode response: %v", err)
+		t.Fatal(err)
 	}
-
-	foundPersistence := false
+	states := map[string]string{}
 	for _, capability := range payload {
-		if capability.ID == "controlplane.persistence" {
-			foundPersistence = true
-			if capability.State != "implemented_development" {
-				t.Fatalf("unexpected persistence capability: %+v", capability)
-			}
-		}
-		if capability.ID == "tunnel.wireguard" && capability.State != "not_implemented" {
-			t.Fatalf("tunnel must not be represented as implemented: %+v", capability)
-		}
+		states[capability.ID] = capability.State
 	}
-	if !foundPersistence {
-		t.Fatal("missing persistence capability")
+	if states["identity.admin_authentication"] != "implemented_boundary_runtime_unconfigured" {
+		t.Fatalf("unexpected auth capability: %q", states["identity.admin_authentication"])
+	}
+	if states["access.policy.management"] != "not_implemented" || states["tunnel.wireguard"] != "not_implemented" {
+		t.Fatalf("mutation/tunnel truth regressed: %+v", states)
 	}
 }
 
@@ -169,11 +169,31 @@ func TestSecurityHeaders(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "/healthz", nil)
 	rec := httptest.NewRecorder()
 	NewRouter("testdata/missing-web-root").ServeHTTP(rec, req)
-
-	if got := rec.Header().Get("X-Content-Type-Options"); got != "nosniff" {
-		t.Fatalf("missing nosniff header: %q", got)
-	}
-	if got := rec.Header().Get("Content-Security-Policy"); got == "" {
-		t.Fatal("missing content security policy")
+	if rec.Header().Get("X-Content-Type-Options") != "nosniff" || rec.Header().Get("Content-Security-Policy") == "" {
+		t.Fatal("missing security headers")
 	}
 }
+
+func TestBearerTokenParser(t *testing.T) {
+	if token, ok := bearerToken("Bearer abc"); !ok || token != "abc" {
+		t.Fatalf("valid bearer token rejected")
+	}
+	for _, value := range []string{"", "Basic abc", "Bearer", "Bearer a b"} {
+		if _, ok := bearerToken(value); ok {
+			t.Fatalf("invalid authorization accepted: %q", value)
+		}
+	}
+}
+
+func TestUnavailableIdentityMapsToServiceUnavailable(t *testing.T) {
+	auth := testAuthenticator{status: identity.Status{RequiredScope: DefaultAdminScope, RuntimeConfigured: true}, err: fmtError(identity.ErrUnavailable)}
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/admin/session", nil)
+	req.Header.Set("Authorization", "Bearer token")
+	rec := httptest.NewRecorder()
+	NewRouterWithRuntimeAndIdentity("testdata/missing-web-root", controlplane.NewState(), controlplane.VolatileStorageStatus(), auth).ServeHTTP(rec, req)
+	if rec.Code != http.StatusServiceUnavailable {
+		t.Fatalf("expected 503, got %d", rec.Code)
+	}
+}
+
+func fmtError(err error) error { return errors.Join(errors.New("wrapped"), err) }

@@ -25,7 +25,7 @@ jobs:
           node-version: '22'
       - name: Verify Go formatting
         run: test -z "$(gofmt -l cmd internal)"
-      - name: Test server and persistence
+      - name: Test server, persistence, and Identity boundary
         run: go test ./...
       - name: Vet server
         run: go vet ./...
@@ -33,23 +33,22 @@ jobs:
         run: node --check apps/web/app.js
       - name: Validate platform contract anchors
         run: |
-          grep -q 'version: 0.1.0-dev.3' goreecloud.platform.yaml
+          grep -q 'version: 0.1.0-dev.4' goreecloud.platform.yaml
           grep -q 'lifecycle: Development' goreecloud.platform.yaml
           grep -q 'production_ready: false' goreecloud.platform.yaml
           grep -q 'stable_eligible: false' goreecloud.platform.yaml
-          grep -q 'server: development_persistent_control_plane' goreecloud.platform.yaml
+          grep -q 'server: development_identity_aware_control_plane' goreecloud.platform.yaml
           grep -q 'web_dashboard: development_dashboard' goreecloud.platform.yaml
           grep -q 'android: development_client' goreecloud.platform.yaml
           grep -q 'google_tv: development_client' goreecloud.platform.yaml
           grep -q 'ios: development_client' goreecloud.platform.yaml
           grep -q 'controlplane_persistence: implemented_development_revisioned_file_store' goreecloud.platform.yaml
-          grep -q 'controlplane_migrations: implemented_development_schema_v1_ledger' goreecloud.platform.yaml
-          grep -q 'persistence: development_file_store' goreecloud.platform.yaml
-          grep -q 'schema_version: 1' goreecloud.platform.yaml
-          grep -q 'integrity: sha256' goreecloud.platform.yaml
-          grep -q 'multi_writer: false' goreecloud.platform.yaml
-          grep -q 'authentication: not_implemented' goreecloud.platform.yaml
-          grep -q 'policy_mode: deny_by_default' goreecloud.platform.yaml
+          grep -q 'identity_admin_authentication: implemented_development_consumer_boundary_runtime_acceptance_pending' goreecloud.platform.yaml
+          grep -q 'identity_admin_session_probe: implemented_development_read_only' goreecloud.platform.yaml
+          grep -q 'administrative_mutation: not_implemented' goreecloud.platform.yaml
+          grep -q 'state: development_consumer_boundary_runtime_unaccepted' goreecloud.platform.yaml
+          grep -q 'authentication: goreecloud_identity_boundary_runtime_unconfigured_by_default' goreecloud.platform.yaml
+          grep -q 'admin_mutation: not_exposed' goreecloud.platform.yaml
           grep -q 'access_policy_evaluation: implemented_decision_only_deny_by_default' goreecloud.platform.yaml
           grep -q 'tunnel: not_implemented' goreecloud.platform.yaml
 
