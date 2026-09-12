@@ -7,7 +7,8 @@
 - [x] Establish truthful Platform System status reporting.
 - [x] Establish native control-plane state and truthful overview reporting.
 - [~] Add persistent revision/configuration store with migration framework. Development file persistence, schema versioning, migration ledger, checksum verification, and revision metadata are implemented; production database/rollback/HA evidence remains incomplete.
-- [ ] Add GoreeCloud Identity authenticated administrative sessions.
+- [~] Add GoreeCloud Identity authenticated administrative sessions. OAuth token-introspection consumer boundary and protected read-only admin-session probe are implemented; real Identity application registration/runtime validation and production SSO acceptance remain incomplete.
+- [ ] Add revisioned authenticated resource/group/policy mutation, preview, activation, rollback, and audit evidence.
 - [ ] Add Privacy Shield authorization context to data-affecting operations.
 - [ ] Add Wardveil trust/evidence adapter.
 - [ ] Add Everkeep snapshot/restore integration.
@@ -37,6 +38,7 @@
 ## P3 — Production qualification
 
 - [~] Exact-revision CI covers server/web, portable iOS core, Android, and Google TV Development builds; full Apple application/release validation remains required.
+- [ ] Real GoreeCloud Identity integration tests covering registration, token/session lifetime, disabled-account behavior, outage, revocation expectations, recovery, and rollback.
 - [ ] Network-lab integration and failure-injection tests.
 - [~] Development persistence migration and corruption tests exist; production migration/rollback/restore testing remains incomplete.
 - [ ] Security/privacy/recovery validation.
